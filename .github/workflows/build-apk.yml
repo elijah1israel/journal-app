@@ -46,9 +46,17 @@ jobs:
       # ships a `test/widget_test.dart` that references the template
       # class name (`MyApp`) — we use `WickbookApp`, so drop that file
       # immediately to keep `flutter analyze` clean.
+      #
+      # `--project-name=wickbook` is required because the repository is
+      # cloned into `journal-app/` (the GitHub repo name still uses a
+      # hyphen). Without the override, `flutter create` infers the
+      # package name from the directory and rejects "journal-app" —
+      # Dart package names can't contain hyphens. The override forces
+      # the lowercase brand name and keeps the inferred package name
+      # aligned with our pubspec `name:`.
       - name: Regenerate platform folders
         run: |
-          flutter create --platforms=android .
+          flutter create --platforms=android --project-name=wickbook .
           rm -f test/widget_test.dart
 
       - name: Flutter pub get
