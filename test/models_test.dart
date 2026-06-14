@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:journal/models/auth_user.dart';
-import 'package:journal/models/strategy.dart';
-import 'package:journal/models/trade.dart';
+import 'package:wickbook/models/auth_user.dart';
+import 'package:wickbook/models/strategy.dart';
+import 'package:wickbook/models/trade.dart';
 
 void main() {
   group('AuthUser', () {

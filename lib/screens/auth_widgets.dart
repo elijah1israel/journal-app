@@ -81,13 +81,13 @@ class AuthScaffold extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       SvgPicture.asset(
-                        'assets/branding/journal-icon.svg',
+                        'assets/branding/wickbook-icon.svg',
                         width: 48,
                         height: 48,
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'Journal',
+                        'Wickbook',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,

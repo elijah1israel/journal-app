@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'calendar_screen.dart';
 import 'dashboard_screen.dart';
 import 'profile_screen.dart';
 import 'strategies_screen.dart';
@@ -44,6 +45,12 @@ class _HomeShellState extends State<HomeShell> {
       icon: Icons.show_chart_outlined,
       selectedIcon: Icons.show_chart,
       builder: (_) => const TradesScreen(),
+    ),
+    _NavItem(
+      label: 'Calendar',
+      icon: Icons.calendar_month_outlined,
+      selectedIcon: Icons.calendar_month,
+      builder: (_) => const CalendarScreen(),
     ),
     _NavItem(
       label: 'Strategies',

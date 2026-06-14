@@ -44,7 +44,7 @@ jobs:
       # only; the Android scaffolding is regenerated here so the workflow
       # stays the source of truth for build config. The default scaffold
       # ships a `test/widget_test.dart` that references the template
-      # class name (`MyApp`) — we use `JournalApp`, so drop that file
+      # class name (`MyApp`) — we use `WickbookApp`, so drop that file
       # immediately to keep `flutter analyze` clean.
       - name: Regenerate platform folders
         run: |
@@ -54,14 +54,14 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # The Dart package name has to be lowercase (`journal`), and
+      # The Dart package name has to be lowercase (`wickbook`), and
       # `flutter create` carries that lowercase string straight through
       # to `android:label` in the AndroidManifest. Override it so the
-      # launcher shows the brand-cased "Journal".
-      - name: Set Android display name to "Journal"
+      # launcher shows the brand-cased "Wickbook".
+      - name: Set Android display name to "Wickbook"
         run: |
           sed -i \
-            's|android:label="journal"|android:label="Journal"|g' \
+            's|android:label="wickbook"|android:label="Wickbook"|g' \
             android/app/src/main/AndroidManifest.xml
 
       # `flutter create` only puts INTERNET in the debug & profile
@@ -135,7 +135,7 @@ jobs:
       - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: journal-${{ github.event.inputs.build-mode || 'release' }}-v${{ steps.ver.outputs.build_name }}
+          name: wickbook-${{ github.event.inputs.build-mode || 'release' }}-v${{ steps.ver.outputs.build_name }}
           path: artifacts/*.apk
           if-no-files-found: error
           retention-days: 30

@@ -1,4 +1,4 @@
-# Journal · Claude notes
+# Wickbook · Claude notes
 
 Flutter mobile companion for the Trade Journal platform. Rides the
 same Django backend as the React `trade-journal-frontend` (`/api/`
@@ -8,7 +8,7 @@ routes, JWT auth) — this client is just the mobile-shaped slice.
 
 ```
 lib/
-  config.dart           Base URL (override with --dart-define=JOURNAL_API=...)
+  config.dart           Base URL (override with --dart-define=WICKBOOK_API=...)
   main.dart             Splash → login/register → home shell
   theme/app_theme.dart  Brand palette + Material 3 theme
   state/app_state.dart  Single ChangeNotifier covering the whole session
@@ -16,7 +16,7 @@ lib/
                         + token_storage (flutter_secure_storage)
   models/               Wire-shaped value types (auth_user, trade, strategy)
   screens/              splash, login, register, home_shell, dashboard,
-                        trades, trade_form, strategies, profile
+                        trades, trade_form, calendar, strategies, profile
   widgets/ui.dart       PrimaryButton, StatusPill, EmptyState, formatPnl
 ```
 
@@ -29,15 +29,17 @@ between the two apps should land on identical idioms.
 
 `HomeShell` (lib/screens/home_shell.dart) hosts every top-level screen
 behind a horizontally-scrollable bottom nav (`_ScrollableBottomNav`),
-copied beat-for-beat from Pable. The four tabs are:
+copied beat-for-beat from Pable. The five tabs are:
 
 1. **Dashboard** — stat tiles + recent trades
 2. **Trades** — filterable journal list, FAB to log a new trade
-3. **Strategies** — list + bottom-sheet editor
-4. **Profile** — user card + sign-out
+3. **Calendar** — month grid tinted by daily P&L; tap a day to drill in
+4. **Strategies** — list + bottom-sheet editor
+5. **Profile** — user card + sign-out
 
 Tabs live in an `IndexedStack` so each tab's scroll position is
-preserved across switches.
+preserved across switches. The nav row scrolls horizontally, so adding
+Performance / Signals later just slots in without squeezing labels.
 
 ## Order of operations
 
@@ -48,6 +50,9 @@ preserved across switches.
    lands on the shell, not on a "now sign in" screen.
 3. The trade form POSTs / PATCHes; the backend computes P&L, R:R, and
    status server-side — the client only ever sends the inputs.
+4. The calendar buckets closed trades by `exit_date` (local time) and
+   tints each day cell by the signed sum of its P&L. Open trades don't
+   show — they have no realised P&L yet.
 
 ## Local dev
 
@@ -55,18 +60,18 @@ Platform folders (`android/`, `ios/`) are intentionally not committed.
 On a fresh clone:
 
 ```bash
-flutter create .                                              # bootstrap platforms
+flutter create .                                                # bootstrap platforms
 flutter pub get
-flutter run --dart-define=JOURNAL_API=http://10.0.2.2:8000/api   # Android emulator
-flutter test                                                  # model round-trip tests
-flutter analyze                                               # must stay clean
+flutter run --dart-define=WICKBOOK_API=http://10.0.2.2:8000/api   # Android emulator
+flutter test                                                    # model round-trip tests
+flutter analyze                                                 # must stay clean
 ```
 
 ## CI
 
 `.github/workflows/build-apk.yml` mirrors Pable's workflow: regenerates
 the Android scaffold inside the runner, patches the manifest to add
-INTERNET in release builds and rename the launcher to "Journal",
+INTERNET in release builds and rename the launcher to "Wickbook",
 generates launcher icons from `assets/icon/icon.png`, runs
 `flutter analyze` + `flutter test`, then builds release split-per-ABI
 + universal APKs and uploads them as workflow artifacts. No deploy
@@ -74,24 +79,32 @@ step yet — sideload from the artifact for now.
 
 ## Branding
 
-Slate ink (`#0F1B2D`) + emerald (`#10B981`) on soft white (`#FBFBF9`).
+Charcoal ink (`#0E1116`) + bullish emerald (`#00D964`) + bearish red
+(`#FF3B47`) on soft white (`#FBFBF9`). The brand mark is a stylised
+**morning star** three-candle reversal pattern; those same green and
+red are reused as the P&L tint via `AppColors.pnl(value)` so the logo
+and every chart cell speak the same colour language.
+
 The colour constants live in `theme/app_theme.dart` under `AppColors`;
-the emerald accents are keyed `teal*` to match the Pable widget helpers
-so the shared widget code (PrimaryButton, StatusPill, EmptyState) ports
-without changes.
+the emerald is keyed `teal*` to match the Pable widget helpers so the
+shared widget code (PrimaryButton, StatusPill, FilterChip) ports
+without renames.
 
-- `assets/branding/journal-icon.svg`, `journal-glyph.svg` — bundled
-  with the app; shown on splash + login.
+- `assets/branding/wickbook-icon.svg` — square morning-star app icon;
+  shown on splash + auth.
+- `assets/branding/wickbook-logo-light.svg` — horizontal logo (dark
+  wordmark) for light surfaces.
+- `assets/branding/wickbook-logo-dark.svg` — horizontal logo (white
+  wordmark) for dark surfaces / overlays.
 - `assets/icon/icon.png`, `icon_foreground.png` — fed to
-  `flutter_launcher_icons` so CI regenerates the Android launcher
-  icon from the same source on every build. They are not committed
-  yet; add them before the first APK release.
+  `flutter_launcher_icons`; CI regenerates the Android launcher icon
+  on every build. Adaptive background is `#0E1116` to match the brand.
 
-The Dart package name has to be lowercase (`journal`), so the workflow
-patches `android/app/src/main/AndroidManifest.xml` after `flutter
-create` to set `android:label="Journal"` and inject the INTERNET
-permission into the release manifest (`flutter create` only adds it
-to the debug + profile manifests).
+The Dart package name has to be lowercase (`wickbook`), so the
+workflow patches `android/app/src/main/AndroidManifest.xml` after
+`flutter create` to set `android:label="Wickbook"` and inject the
+INTERNET permission into the release manifest (`flutter create` only
+adds it to the debug + profile manifests).
 
 ## Conventions
 

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 420" width="1500" height="420">
+  <title>Wickbook logo (dark background variant)</title>
+  <desc>Wickbook horizontal logo with morning star icon on the left and the Wickbook wordmark in white text, sized for dark backgrounds.</desc>
+  <g transform="translate(60, 70)">
+    <g transform="scale(0.2734375)">
+      <rect x="0" y="0" width="1024" height="1024" rx="224" fill="#0E1116"/>
+      <line x1="272" y1="220" x2="272" y2="735" stroke="#F5F7FA" stroke-width="14" stroke-linecap="round"/>
+      <rect x="217" y="290" width="110" height="390" fill="#FF3B47"/>
+      <line x1="512" y1="720" x2="512" y2="820" stroke="#F5F7FA" stroke-width="14" stroke-linecap="round"/>
+      <rect x="457" y="748" width="110" height="34" fill="#9BA3AE"/>
+      <line x1="752" y1="260" x2="752" y2="780" stroke="#F5F7FA" stroke-width="14" stroke-linecap="round"/>
+      <rect x="697" y="320" width="110" height="400" fill="#00D964"/>
+    </g>
+  </g>
+  <text x="400" y="275" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="170" font-weight="600" letter-spacing="-3" fill="#F5F7FA">Wickbook</text>
+</svg>

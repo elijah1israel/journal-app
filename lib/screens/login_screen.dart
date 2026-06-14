@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
         key: _formKey,
         child: AuthCard(
           title: 'Sign in',
-          subtitle: 'Log your trades. Sharpen your edge.',
+          subtitle: 'Welcome back to your trade journal.',
           children: [
             const AuthFieldLabel('Email'),
             TextFormField(

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Wickbook app icon</title>
+  <desc>Morning star three-candle reversal pattern: a long red bearish candle, a small doji, and a long green bullish candle, set on a black rounded square.</desc>
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="#0E1116"/>
+  <line x1="272" y1="220" x2="272" y2="735" stroke="#F5F7FA" stroke-width="14" stroke-linecap="round"/>
+  <rect x="217" y="290" width="110" height="390" fill="#FF3B47"/>
+  <line x1="512" y1="720" x2="512" y2="820" stroke="#F5F7FA" stroke-width="14" stroke-linecap="round"/>
+  <rect x="457" y="748" width="110" height="34" fill="#9BA3AE"/>
+  <line x1="752" y1="260" x2="752" y2="780" stroke="#F5F7FA" stroke-width="14" stroke-linecap="round"/>
+  <rect x="697" y="320" width="110" height="400" fill="#00D964"/>
+</svg>

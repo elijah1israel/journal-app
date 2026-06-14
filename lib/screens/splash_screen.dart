@@ -15,15 +15,15 @@ class SplashScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SvgPicture.asset(
-              'assets/branding/journal-icon.svg',
+              'assets/branding/wickbook-icon.svg',
               width: 96,
               height: 96,
             ),
             const SizedBox(height: 16),
             const Text(
-              'Journal',
+              'Wickbook',
               style: TextStyle(
-                fontSize: 30,
+                fontSize: 28,
                 fontWeight: FontWeight.w800,
                 color: AppColors.ink,
                 letterSpacing: -0.5,

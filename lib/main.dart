@@ -14,18 +14,18 @@ void main() {
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,
   ));
-  runApp(const JournalApp());
+  runApp(const WickbookApp());
 }
 
-class JournalApp extends StatelessWidget {
-  const JournalApp({super.key});
+class WickbookApp extends StatelessWidget {
+  const WickbookApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => AppState(),
       child: MaterialApp(
-        title: 'Journal',
+        title: 'Wickbook',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
         home: const _Root(),

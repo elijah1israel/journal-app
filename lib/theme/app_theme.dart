@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Journal brand palette — slate ink + emerald.
+/// Wickbook brand palette — charcoal ink + morning-star greens & reds.
 ///
-/// We picked an emerald accent (financial green) over the Tranquee teal
-/// because "P&L green" reads as canonical to a trader audience. The
-/// rest of the palette mirrors the Pable structure so widget code stays
-/// portable between the two apps.
+/// The brand mark is a three-candle morning-star reversal: a bearish red
+/// candle, a doji, and a bullish green candle. Those exact colours
+/// (`#00D964`, `#FF3B47`) double as the app's gain / loss tints so
+/// every P&L surface reads as "the green-and-red of the logo".
 class AppColors {
-  static const ink = Color(0xFF0F1B2D); // brand slate ink
-  static const inkDeep = Color(0xFF091221);
+  static const ink = Color(0xFF0E1116); // brand charcoal
+  static const inkDeep = Color(0xFF080A0E);
 
-  static const teal = Color(0xFF10B981); // brand emerald (gains)
-  static const tealDark = Color(0xFF0E9A6B);
-  static const tealDarker = Color(0xFF0B7A55);
-  static const teal50 = Color(0xFFE6F7F0);
-  static const teal100 = Color(0xFFBFE6D3);
+  // Brand emerald — kept under the `teal*` prefix so the widget code
+  // (PrimaryButton, StatusPill, FilterChip…) can stay portable from
+  // pable-mobile without rename churn.
+  static const teal = Color(0xFF00D964);
+  static const tealDark = Color(0xFF00B554);
+  static const tealDarker = Color(0xFF008C40);
+  static const teal50 = Color(0xFFE6FBEF);
+  static const teal100 = Color(0xFFBFF1D2);
 
   static const bg = Color(0xFFFBFBF9); // brand soft white
   static const surface = Colors.white;
@@ -29,9 +32,9 @@ class AppColors {
   static const gray400 = Color(0xFF9CA3AF);
   static const gray300 = Color(0xFFD1D5DB);
 
-  static const success = Color(0xFF10B981);
+  static const success = Color(0xFF00D964); // brand bullish candle
   static const warn = Color(0xFFF59E0B);
-  static const danger = Color(0xFFEF4444); // losses
+  static const danger = Color(0xFFFF3B47); // brand bearish candle
   static const info = Color(0xFF3B82F6);
   static const violet = Color(0xFF8B5CF6);
 

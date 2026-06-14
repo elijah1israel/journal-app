@@ -10,8 +10,8 @@ class TokenStorage {
 
   final FlutterSecureStorage _storage;
 
-  static const _kAccess = 'journal_access';
-  static const _kRefresh = 'journal_refresh';
+  static const _kAccess = 'wickbook_access';
+  static const _kRefresh = 'wickbook_refresh';
 
   Future<String?> get accessToken => _storage.read(key: _kAccess);
   Future<String?> get refreshToken => _storage.read(key: _kRefresh);

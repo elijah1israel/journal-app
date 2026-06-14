@@ -1,5 +1,5 @@
-name: journal
-description: "Journal — mobile trade journal for active traders."
+name: wickbook
+description: "Wickbook — mobile trade journal for active traders."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -33,11 +33,12 @@ flutter_launcher_icons:
   ios: false
   image_path: "assets/icon/icon.png"
   min_sdk_android: 24
-  adaptive_icon_background: "#0F1B2D"
+  adaptive_icon_background: "#0E1116"
   adaptive_icon_foreground: "assets/icon/icon_foreground.png"
 
 flutter:
   uses-material-design: true
   assets:
-    - assets/branding/journal-icon.svg
-    - assets/branding/journal-glyph.svg
+    - assets/branding/wickbook-icon.svg
+    - assets/branding/wickbook-logo-light.svg
+    - assets/branding/wickbook-logo-dark.svg
