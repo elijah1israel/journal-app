@@ -1,7 +1,16 @@
 import 'package:dio/dio.dart';
 
+import '../models/csv_import_result.dart';
 import '../models/trade.dart';
 import 'api_client.dart';
+
+/// Raised when the server reports row-level CSV problems (HTTP 400 with
+/// an `errors` array). UI shows the per-row messages in a list so the
+/// user can fix the file and retry.
+class CsvImportException extends ApiException {
+  CsvImportException(super.message, this.errors);
+  final List<String> errors;
+}
 
 class TradeService {
   TradeService({ApiClient? client}) : _client = client ?? ApiClient();
@@ -55,6 +64,49 @@ class TradeService {
       await _dio.delete('/trades/$id/');
     } on DioException catch (e) {
       throw toApiException(e);
+    }
+  }
+
+  /// Sync trades from an MT4 / MT5 broker CSV. The server matches rows
+  /// by Ticket ID — new tickets are inserted, open ones get updated,
+  /// closed ones are skipped. Returns a [CsvImportResult] with the
+  /// counts the UI shows on the success screen.
+  Future<CsvImportResult> importCsv({
+    required String path,
+    required String filename,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(path, filename: filename),
+      });
+      final res = await _dio.post(
+        '/trades/import_csv/',
+        data: form,
+        // Let dio compute the multipart boundary itself — don't override
+        // Content-Type or the request body becomes unparseable on the
+        // server side.
+        options: Options(
+          headers: {Headers.contentTypeHeader: null},
+          contentType: 'multipart/form-data',
+        ),
+      );
+      return CsvImportResult.fromJson(
+          Map<String, dynamic>.from(res.data as Map));
+    } on DioException catch (e) {
+      // The server signals row-level problems with
+      // { detail: "CSV contains errors.", errors: ["Row 2: …", …] }
+      // — bubble those up as a typed exception so the UI can render
+      // the per-row list.
+      final data = e.response?.data;
+      if (data is Map && data['errors'] is List) {
+        final message = (data['detail'] as String?) ??
+            'CSV contains errors. Fix the rows below and try again.';
+        final errors = (data['errors'] as List)
+            .map((row) => row.toString())
+            .toList(growable: false);
+        throw CsvImportException(message, errors);
+      }
+      throw toApiException(e, fallback: 'Could not import the CSV.');
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wickbook/models/auth_user.dart';
+import 'package:wickbook/models/csv_import_result.dart';
 import 'package:wickbook/models/strategy.dart';
 import 'package:wickbook/models/trade.dart';
 
@@ -98,6 +99,30 @@ void main() {
       expect(t.result, TradeResult.none);
       expect(t.exitPrice, isNull);
       expect(t.pnl, isNull);
+    });
+  });
+
+  group('CsvImportResult.fromJson', () {
+    test('parses the broker-sync summary', () {
+      final r = CsvImportResult.fromJson({
+        'created': 12,
+        'updated': 3,
+        'skipped': 47,
+        'total_in_file': 62,
+      });
+      expect(r.created, 12);
+      expect(r.updated, 3);
+      expect(r.skipped, 47);
+      expect(r.totalInFile, 62);
+      expect(r.processed, 62);
+    });
+
+    test('defaults missing fields to zero', () {
+      final r = CsvImportResult.fromJson({});
+      expect(r.created, 0);
+      expect(r.updated, 0);
+      expect(r.skipped, 0);
+      expect(r.totalInFile, 0);
     });
   });
 

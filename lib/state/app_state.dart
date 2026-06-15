@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/auth_user.dart';
+import '../models/csv_import_result.dart';
 import '../models/strategy.dart';
 import '../models/trade.dart';
 import '../services/auth_service.dart';
@@ -199,6 +200,24 @@ class AppState extends ChangeNotifier {
     await _trades.delete(id);
     _tradeList.removeWhere((t) => t.id == id);
     notifyListeners();
+  }
+
+  /// Sync trades from a broker CSV. The server returns
+  /// (created, updated, skipped, total_in_file) so the import sheet
+  /// can show a success summary. We refresh the trade list after a
+  /// successful import — the new rows + updated ones land in one
+  /// canonical pull rather than being merged piecemeal.
+  Future<CsvImportResult> importTradesCsv({
+    required String path,
+    required String filename,
+  }) async {
+    final result = await _trades.importCsv(path: path, filename: filename);
+    // Only refresh if the file actually changed anything; "all skipped"
+    // doesn't need a round-trip.
+    if (result.created > 0 || result.updated > 0) {
+      await refreshTrades();
+    }
+    return result;
   }
 
   // ── Strategies ─────────────────────────────────────────────────

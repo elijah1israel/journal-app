@@ -12,7 +12,9 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Color(0xFF0E1116),
+    systemNavigationBarIconBrightness: Brightness.light,
   ));
   runApp(const WickbookApp());
 }
@@ -27,7 +29,7 @@ class WickbookApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Wickbook',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
+        theme: AppTheme.dark,
         home: const _Root(),
       ),
     );

@@ -29,12 +29,12 @@ class StrategiesScreen extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.ink,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.teal,
+        foregroundColor: AppColors.inkDeep,
         onPressed: () => _openSheet(context, null),
         icon: const Icon(Icons.add),
         label: const Text('New strategy',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+            style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: RefreshIndicator(
         color: AppColors.teal,

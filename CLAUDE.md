@@ -25,6 +25,17 @@ The architecture is a deliberate port of `pable-mobile` — single
 tokens, custom scrollable bottom-nav in the home shell. Anyone hopping
 between the two apps should land on identical idioms.
 
+## Theme
+
+Dark-only — the brand icon already sits on `#0E1116`, so the rest of
+the UI shares the same charcoal so the icon reads as part of the
+chrome instead of a sticker on a contrasting background. Surfaces are
+a slight elevation above the page (`#16191F`), with text scaled from
+the wick-white `#F5F7FA` down to mid-grey for hints. Primary actions
+(PrimaryButton, FAB) are brand emerald `#00D964` with `inkDeep` text
+— that "this is a win-button" colour cue is the same as the bullish
+candle in the logo.
+
 ## Bottom navigation
 
 `HomeShell` (lib/screens/home_shell.dart) hosts every top-level screen
@@ -53,6 +64,14 @@ Performance / Signals later just slots in without squeezing labels.
 4. The calendar buckets closed trades by `exit_date` (local time) and
    tints each day cell by the signed sum of its P&L. Open trades don't
    show — they have no realised P&L yet.
+5. The CSV import sheet (Trades → upload icon → `CsvImportSheet`)
+   POSTs the file as multipart to `/trades/import_csv/`. The server
+   matches rows by Ticket ID: new ones are created, open ones are
+   updated, closed ones are skipped. The response
+   `{created, updated, skipped, total_in_file}` drives the success
+   summary. Per-row validation errors come back as
+   `{detail, errors: [...]}` and surface in a `CsvImportException`
+   the sheet renders as a scrollable list.
 
 ## Local dev
 

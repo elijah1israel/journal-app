@@ -39,18 +39,20 @@ class PrimaryButton extends StatelessWidget {
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
+                    strokeWidth: 2, color: AppColors.inkDeep),
               )
             : Icon(icon ?? Icons.arrow_forward_rounded, size: 18),
         label: Text(label),
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.ink,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.teal,
+          foregroundColor: AppColors.inkDeep,
+          disabledBackgroundColor: AppColors.surface,
+          disabledForegroundColor: AppColors.gray500,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12)),
           textStyle:
-              const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
         ),
       ),
     );

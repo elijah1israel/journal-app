@@ -71,6 +71,7 @@ lib/
     dashboard_screen.dart      Stat tiles + recent trades
     trades_screen.dart         Filterable journal list
     trade_form_screen.dart     Log / edit / delete a trade
+    csv_import_sheet.dart      MT4 / MT5 broker CSV sync
     calendar_screen.dart       Month grid with daily P&L heatmap
     strategies_screen.dart     List + bottom-sheet editor
     profile_screen.dart        User card + sign-out

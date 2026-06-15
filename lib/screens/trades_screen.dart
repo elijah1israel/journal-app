@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/csv_import_result.dart';
 import '../models/trade.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
+import 'csv_import_sheet.dart';
 import 'trade_form_screen.dart';
 
 /// The trade journal — paginated list with filters (status + direction).
@@ -34,6 +36,12 @@ class _TradesScreenState extends State<TradesScreen> {
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
+            tooltip: 'Import CSV',
+            onPressed: state.loadingTrades ? null : () => _importCsv(context),
+            icon: const Icon(Icons.upload_file_outlined,
+                color: AppColors.gray700),
+          ),
+          IconButton(
             tooltip: 'Refresh',
             onPressed: state.loadingTrades ? null : () => state.refreshTrades(),
             icon: const Icon(Icons.refresh, color: AppColors.gray700),
@@ -41,13 +49,13 @@ class _TradesScreenState extends State<TradesScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.ink,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.teal,
+        foregroundColor: AppColors.inkDeep,
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => const TradeFormScreen())),
         icon: const Icon(Icons.add),
         label: const Text('Log trade',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+            style: TextStyle(fontWeight: FontWeight.w800)),
       ),
       body: Column(
         children: [
@@ -83,6 +91,15 @@ class _TradesScreenState extends State<TradesScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _importCsv(BuildContext context) async {
+    final CsvImportResult? result = await CsvImportSheet.show(context);
+    if (result == null || !context.mounted) return;
+    final summary = result.created + result.updated == 0
+        ? 'Nothing new — all tickets already on file.'
+        : '+${result.created} added · ${result.updated} updated · ${result.skipped} skipped';
+    showAppSnack(context, summary);
   }
 
   List<Trade> _apply(List<Trade> raw) {
