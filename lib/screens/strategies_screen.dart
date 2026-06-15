@@ -6,6 +6,7 @@ import '../services/api_client.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/wickbook_top_bar.dart';
 
 /// List of strategies + an inline form for create / edit.
 class StrategiesScreen extends StatelessWidget {
@@ -16,9 +17,8 @@ class StrategiesScreen extends StatelessWidget {
     final state = context.watch<AppState>();
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: const Text('Strategies',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+      appBar: WickbookTopBar(
+        section: 'Strategies',
         actions: [
           IconButton(
             tooltip: 'Refresh',

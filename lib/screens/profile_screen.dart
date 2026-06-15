@@ -6,6 +6,7 @@ import '../config.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/wickbook_top_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -17,10 +18,7 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: const Text('Profile',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-      ),
+      appBar: const WickbookTopBar(section: 'Profile'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [

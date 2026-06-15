@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/wickbook_top_bar.dart';
 
 /// The dashboard tab — stat tiles + a "recent trades" list. Mirrors
 /// the React `DashboardPage` from trade-journal-frontend, condensed
@@ -17,10 +18,8 @@ class DashboardScreen extends StatelessWidget {
     final name = state.user?.displayName.split(' ').first ?? '';
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: Text(name.isEmpty ? 'Dashboard' : 'Hi, $name',
-            style: const TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w800)),
+      appBar: WickbookTopBar(
+        section: name.isEmpty ? 'Dashboard' : 'Hi, $name',
       ),
       body: RefreshIndicator(
         color: AppColors.teal,

@@ -7,6 +7,7 @@ import '../models/trade.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
+import '../widgets/wickbook_top_bar.dart';
 import 'csv_import_sheet.dart';
 import 'trade_form_screen.dart';
 
@@ -31,9 +32,8 @@ class _TradesScreenState extends State<TradesScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        title: const Text('Trades',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+      appBar: WickbookTopBar(
+        section: 'Trades',
         actions: [
           IconButton(
             tooltip: 'Import CSV',
