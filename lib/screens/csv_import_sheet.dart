@@ -47,14 +47,29 @@ class _CsvImportSheetState extends State<CsvImportSheet> {
   List<String> _rowErrors = const [];
 
   Future<void> _pickFile() async {
+    // `FileType.custom` with `allowedExtensions: ['csv']` greys CSVs out
+    // in the system picker on a lot of Android builds (the MIME mapping
+    // for .csv is inconsistent), so the file the user wants is unpickable.
+    // Open the picker to all files instead and validate the extension
+    // ourselves once a file comes back.
     final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['csv'],
+      type: FileType.any,
       withData: false, // we send the path to dio's MultipartFile.fromFile
     );
     if (picked == null || picked.files.isEmpty) return;
+    final file = picked.files.first;
+    final isCsv = (file.extension?.toLowerCase() == 'csv') ||
+        file.name.toLowerCase().endsWith('.csv');
+    if (!isCsv) {
+      setState(() {
+        _file = null;
+        _error = 'That\'s not a CSV file. Pick your broker\'s .csv export.';
+        _rowErrors = const [];
+      });
+      return;
+    }
     setState(() {
-      _file = picked.files.first;
+      _file = file;
       _error = null;
       _rowErrors = const [];
     });

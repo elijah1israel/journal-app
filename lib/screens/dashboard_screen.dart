@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/buy_sell_chart.dart';
 import '../widgets/ui.dart';
 import '../widgets/wickbook_top_bar.dart';
 
-/// The dashboard tab — stat tiles + a "recent trades" list. Mirrors
+/// The dashboard tab — stat tiles + a buys-vs-sells breakdown. Mirrors
 /// the React `DashboardPage` from trade-journal-frontend, condensed
 /// for a phone-sized layout.
 class DashboardScreen extends StatelessWidget {
@@ -29,34 +30,13 @@ class DashboardScreen extends StatelessWidget {
           children: [
             _StatGrid(state: state),
             const SizedBox(height: 20),
-            const _SectionHeader(title: 'Recent trades'),
+            const _SectionHeader(title: 'Buys vs sells'),
             const SizedBox(height: 8),
-            if (state.loadingTrades && state.trades.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.teal)),
-              )
-            else if (state.trades.isEmpty)
-              const EmptyState(
-                icon: Icons.show_chart,
-                title: 'No trades yet',
-                subtitle:
-                    'Once you log a trade it shows up here with running P&L.',
-              )
-            else
-              ..._recent(state).map((t) => _MiniTradeTile(trade: t)),
+            BuySellChart(buys: state.buyCount, sells: state.sellCount),
           ],
         ),
       ),
     );
-  }
-
-  List _recent(AppState state) {
-    final list = state.trades.toList();
-    list.sort((a, b) => b.entryDate.compareTo(a.entryDate));
-    return list.take(5).toList();
   }
 }
 
@@ -97,7 +77,7 @@ class _StatGrid extends StatelessWidget {
                 child: _StatCard(
                     label: 'Win rate',
                     value: '${winRate.toStringAsFixed(0)}%',
-                    color: AppColors.ink)),
+                    color: AppColors.success)),
           ],
         ),
         const SizedBox(height: 12),
@@ -178,61 +158,3 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _MiniTradeTile extends StatelessWidget {
-  const _MiniTradeTile({required this.trade});
-  final dynamic trade;
-
-  @override
-  Widget build(BuildContext context) {
-    final pnl = trade.pnl as double?;
-    final pnlColor = AppColors.pnl(pnl ?? 0);
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: pnlColor.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              trade.direction.label == 'Long'
-                  ? Icons.trending_up
-                  : Icons.trending_down,
-              color: pnlColor,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(trade.symbol,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.gray900)),
-                Text(
-                  '${trade.direction.label} · ${trade.strategyName.isEmpty ? "No strategy" : trade.strategyName}',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppColors.gray500),
-                ),
-              ],
-            ),
-          ),
-          Text(formatPnl(pnl),
-              style: TextStyle(
-                  fontWeight: FontWeight.w800, color: pnlColor)),
-        ],
-      ),
-    );
-  }
-}

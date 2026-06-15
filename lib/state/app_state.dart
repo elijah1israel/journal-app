@@ -58,6 +58,11 @@ class AppState extends ChangeNotifier {
   int get winners => _tradeList.where((t) => t.isWinner).length;
   int get losers => _tradeList.where((t) => t.isLoser).length;
 
+  int get buyCount =>
+      _tradeList.where((t) => t.direction == TradeDirection.buy).length;
+  int get sellCount =>
+      _tradeList.where((t) => t.direction == TradeDirection.sell).length;
+
   double get winRate {
     final closed = closedTrades;
     if (closed == 0) return 0;

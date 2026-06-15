@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/trade.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/buy_sell_chart.dart';
 import '../widgets/ui.dart';
 import '../widgets/wickbook_top_bar.dart';
 import 'trade_form_screen.dart';
@@ -221,6 +222,22 @@ class _MonthHeader extends StatelessWidget {
   }
 }
 
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Text(title,
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: AppColors.gray700,
+                letterSpacing: 0.2)),
+      );
+}
+
 class _DayHeaderRow extends StatelessWidget {
   const _DayHeaderRow();
   static const _days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -280,6 +297,17 @@ class _MonthPage extends StatelessWidget {
     final winDays = buckets.values.where((l) => _pnlOf(l) > 0).length;
     final lossDays = buckets.values.where((l) => _pnlOf(l) < 0).length;
 
+    // Buys vs sells taken this month, scoped by entry date (when the
+    // trade was opened) so open positions count too.
+    final monthTrades = trades.where((t) {
+      final entry = t.entryDate.toLocal();
+      return entry.year == month.year && entry.month == month.month;
+    });
+    final buys =
+        monthTrades.where((t) => t.direction == TradeDirection.buy).length;
+    final sells =
+        monthTrades.where((t) => t.direction == TradeDirection.sell).length;
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
       physics: const BouncingScrollPhysics(),
@@ -294,6 +322,10 @@ class _MonthPage extends StatelessWidget {
         _MonthGrid(month: month, buckets: buckets, onDayTap: onDayTap),
         const SizedBox(height: 16),
         const _Legend(),
+        const SizedBox(height: 20),
+        const _SectionHeader(title: 'Buys vs sells this month'),
+        const SizedBox(height: 8),
+        BuySellChart(buys: buys, sells: sells),
         if (trades.isEmpty)
           const Padding(
             padding: EdgeInsets.only(top: 24),
