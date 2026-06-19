@@ -67,6 +67,18 @@ class AuthService {
     }
   }
 
+  /// PATCH `/traders/me/` with arbitrary profile fields and return the
+  /// fresh user payload. Used by the profile screen to save risk
+  /// guardrails (daily_loss_limit, cool_down_minutes_after_loss).
+  Future<AuthUser> updateProfile(Map<String, dynamic> payload) async {
+    try {
+      final res = await _dio.patch('/traders/me/', data: payload);
+      return AuthUser.fromJson(Map<String, dynamic>.from(res.data as Map));
+    } on DioException catch (e) {
+      throw toApiException(e, fallback: 'Could not save your profile.');
+    }
+  }
+
   Future<void> logout() async {
     await tokens.clear();
   }

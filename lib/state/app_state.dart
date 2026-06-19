@@ -55,6 +55,7 @@ class AppState extends ChangeNotifier {
   bool _loadingStrategies = false;
   bool _loadingCommunities = false;
   DisciplineStats? _discipline;
+  GuardrailStatus? _guardrails;
 
   bool get bootstrapped => _bootstrapped;
   bool get signedIn => _signedIn;
@@ -68,6 +69,7 @@ class AppState extends ChangeNotifier {
   bool get loadingStrategies => _loadingStrategies;
   bool get loadingCommunities => _loadingCommunities;
   DisciplineStats? get discipline => _discipline;
+  GuardrailStatus? get guardrails => _guardrails;
 
   // ── Derived stats (drives the dashboard) ──────────────────────
 
@@ -164,6 +166,7 @@ class AppState extends ChangeNotifier {
     _discoverCommunities.clear();
     _myCommunities.clear();
     _discipline = null;
+    _guardrails = null;
   }
 
   Future<void> _loadAfterAuth() async {
@@ -174,6 +177,7 @@ class AppState extends ChangeNotifier {
         refreshStrategies(),
         refreshCommunities(),
         refreshDiscipline(),
+        refreshGuardrails(),
       ]);
     } catch (_) {
       // empty lists are fine — the screens render an EmptyState
@@ -187,6 +191,25 @@ class AppState extends ChangeNotifier {
     } catch (_) {
       // Soft-fail — dashboard tile just hides itself.
     }
+  }
+
+  Future<GuardrailStatus?> refreshGuardrails() async {
+    try {
+      _guardrails = await _plans.guardrails();
+      notifyListeners();
+      return _guardrails;
+    } catch (_) {
+      return _guardrails;
+    }
+  }
+
+  Future<AuthUser> saveProfile(Map<String, dynamic> payload) async {
+    _user = await _auth.updateProfile(payload);
+    notifyListeners();
+    // Guardrail status depends on these settings — refresh in the
+    // background so the plan screen sees the new policy immediately.
+    unawaited(refreshGuardrails());
+    return _user!;
   }
 
   // ── Trades ─────────────────────────────────────────────────────
@@ -222,6 +245,7 @@ class AppState extends ChangeNotifier {
     // Background refresh — the discipline tile depends on the new trade
     // landing in the followed/broken bucket, but the UX shouldn't wait.
     unawaited(refreshDiscipline());
+    unawaited(refreshGuardrails());
     return created;
   }
 
@@ -235,6 +259,7 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
     unawaited(refreshDiscipline());
+    unawaited(refreshGuardrails());
     return updated;
   }
 
@@ -243,6 +268,7 @@ class AppState extends ChangeNotifier {
     _tradeList.removeWhere((t) => t.id == id);
     notifyListeners();
     unawaited(refreshDiscipline());
+    unawaited(refreshGuardrails());
   }
 
   /// Sync trades from a broker CSV. The server returns

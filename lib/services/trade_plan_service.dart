@@ -55,4 +55,14 @@ class TradePlanService {
       throw toApiException(e);
     }
   }
+
+  Future<GuardrailStatus> guardrails() async {
+    try {
+      final res = await _dio.get('/trades/guardrails/');
+      return GuardrailStatus.fromJson(
+          Map<String, dynamic>.from(res.data as Map));
+    } on DioException catch (e) {
+      throw toApiException(e);
+    }
+  }
 }

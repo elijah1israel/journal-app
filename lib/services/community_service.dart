@@ -107,6 +107,7 @@ class CommunityService {
     String title = '',
     String kind = 'text',
     int? minTierId,
+    Map<String, dynamic>? tradeCall,
   }) async {
     try {
       final res = await _dio.post(
@@ -116,11 +117,35 @@ class CommunityService {
           'body': body,
           'kind': kind,
           if (minTierId != null) 'min_tier': minTierId,
+          if (tradeCall != null) 'trade_call': tradeCall,
         },
       );
       return CommunityPost.fromJson(Map<String, dynamic>.from(res.data as Map));
     } on DioException catch (e) {
       throw toApiException(e, fallback: 'Could not publish the post.');
+    }
+  }
+
+  /// Owner-only: flip a trade call's status as the call plays out
+  /// (`tp1_hit`, `sl_hit`, `closed`, `invalidated`). Server stamps
+  /// `closed_at` on the first terminal transition.
+  Future<TradeCall> updateCallStatus(
+    int communityId,
+    int postId, {
+    required String status,
+    double? closedPnlPips,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/communities/$communityId/posts/$postId/update_call_status/',
+        data: {
+          'status': status,
+          if (closedPnlPips != null) 'closed_pnl_pips': closedPnlPips,
+        },
+      );
+      return TradeCall.fromJson(Map<String, dynamic>.from(res.data as Map));
+    } on DioException catch (e) {
+      throw toApiException(e, fallback: 'Could not update the call.');
     }
   }
 

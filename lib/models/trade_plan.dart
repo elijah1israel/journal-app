@@ -129,6 +129,49 @@ class TradePlan {
   }
 }
 
+/// Live status of the trader's risk guardrails (daily loss cap +
+/// post-loss cool-down). Computed server-side off today's closed
+/// trades — `canTrade` is what the Plan screen reads to decide
+/// between rendering the form and rendering the block banner.
+class GuardrailStatus {
+  const GuardrailStatus({
+    required this.dailyPnl,
+    required this.dailyLossLimit,
+    required this.dailyLossLimitHit,
+    required this.coolDownMinutes,
+    required this.coolDownUntil,
+    required this.canTrade,
+    required this.blockReason,
+  });
+
+  final double dailyPnl;
+  final double? dailyLossLimit;
+  final bool dailyLossLimitHit;
+  final int coolDownMinutes;
+  final DateTime? coolDownUntil;
+  final bool canTrade;
+  final String blockReason;
+
+  static double? _maybeDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  factory GuardrailStatus.fromJson(Map<String, dynamic> json) => GuardrailStatus(
+        dailyPnl: (json['daily_pnl'] as num?)?.toDouble() ?? 0,
+        dailyLossLimit: _maybeDouble(json['daily_loss_limit']),
+        dailyLossLimitHit: json['daily_loss_limit_hit'] as bool? ?? false,
+        coolDownMinutes:
+            (json['cool_down_minutes'] as num?)?.toInt() ?? 0,
+        coolDownUntil: json['cool_down_until'] == null
+            ? null
+            : DateTime.tryParse(json['cool_down_until'] as String),
+        canTrade: json['can_trade'] as bool? ?? true,
+        blockReason: json['block_reason'] as String? ?? '',
+      );
+}
+
 /// Discipline aggregate the dashboard renders ("you trade better when
 /// you follow your rules").
 class DisciplineStats {

@@ -9,6 +9,8 @@ class AuthUser {
     required this.experienceLevel,
     required this.preferredMarkets,
     required this.timezone,
+    required this.dailyLossLimit,
+    required this.coolDownMinutesAfterLoss,
   });
 
   final int id;
@@ -19,6 +21,15 @@ class AuthUser {
   final String experienceLevel;
   final String preferredMarkets;
   final String timezone;
+
+  /// Absolute daily loss cap in account currency, or null if unset.
+  /// When today's realised P&L drops to `-dailyLossLimit`, the API
+  /// refuses to create new pre-trade plans for the rest of the day.
+  final double? dailyLossLimit;
+
+  /// After any losing trade, new pre-trade plans are blocked for this
+  /// many minutes. 0 disables the cool-down.
+  final int coolDownMinutesAfterLoss;
 
   String get displayName {
     final full = '$firstName $lastName'.trim();
@@ -34,6 +45,12 @@ class AuthUser {
         : out;
   }
 
+  static double? _maybeNum(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: (json['id'] as num?)?.toInt() ?? 0,
         email: json['email'] as String? ?? '',
@@ -43,5 +60,8 @@ class AuthUser {
         experienceLevel: json['experience_level'] as String? ?? 'beginner',
         preferredMarkets: json['preferred_markets'] as String? ?? '',
         timezone: json['timezone'] as String? ?? 'UTC',
+        dailyLossLimit: _maybeNum(json['daily_loss_limit']),
+        coolDownMinutesAfterLoss:
+            (json['cool_down_minutes_after_loss'] as num?)?.toInt() ?? 0,
       );
 }
