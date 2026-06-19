@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'package:intl/intl.dart';
+
 import '../models/strategy.dart';
 import '../models/trade_plan.dart';
 import '../services/api_client.dart';
@@ -39,6 +41,16 @@ class _PlanTradeScreenState extends State<PlanTradeScreen> {
   String _direction = 'buy';
   final Map<int, bool> _ticks = {};
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Re-poll the guardrail status as we land — the user might have a
+    // cool-down still active from a loss in another session.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppState>().refreshGuardrails();
+    });
+  }
 
   static final _decimalFormatter =
       FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'));
@@ -143,8 +155,21 @@ class _PlanTradeScreenState extends State<PlanTradeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final strategies = context.watch<AppState>().strategies;
+    final state = context.watch<AppState>();
+    final strategies = state.strategies;
+    final guardrails = state.guardrails;
     final s = _strategy;
+
+    if (guardrails != null && !guardrails.canTrade) {
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          title: const Text('Plan a trade',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        ),
+        body: _GuardrailBlock(status: guardrails),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -487,6 +512,126 @@ class _ChecklistMissing extends StatelessWidget {
               style: const TextStyle(color: AppColors.gray500, fontSize: 13),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-screen block shown in place of the form when the trader is
+/// over their daily loss cap or inside a post-loss cool-down. The
+/// server refuses plan creation in this state, so we don't even let
+/// the user start filling the form — the friction is the feature.
+class _GuardrailBlock extends StatelessWidget {
+  const _GuardrailBlock({required this.status});
+  final GuardrailStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      color: AppColors.teal,
+      onRefresh: () => context.read<AppState>().refreshGuardrails(),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+        children: [
+          Icon(
+            status.dailyLossLimitHit
+                ? Icons.do_not_disturb
+                : Icons.timer_outlined,
+            color: AppColors.danger,
+            size: 56,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            status.dailyLossLimitHit
+                ? 'Daily loss limit reached'
+                : 'Cool-down active',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.gray900,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            status.blockReason,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: AppColors.gray500, fontSize: 13, height: 1.4),
+          ),
+          if (status.coolDownUntil != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Unlocks at ${DateFormat('HH:mm').format(status.coolDownUntil!.toLocal())}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: AppColors.gray500, fontSize: 12.5),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                _StatRow(label: "Today's P&L",
+                    value: formatPnl(status.dailyPnl),
+                    color: AppColors.pnl(status.dailyPnl)),
+                if (status.dailyLossLimit != null)
+                  _StatRow(label: 'Daily limit',
+                      value: '-${status.dailyLossLimit!.toStringAsFixed(0)}',
+                      color: AppColors.gray700),
+                if (status.coolDownMinutes > 0)
+                  _StatRow(label: 'Cool-down',
+                      value: '${status.coolDownMinutes} min',
+                      color: AppColors.gray700),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'You can still log trades that already happened — what\'s '
+            'blocked is starting a new plan. Walk away from the chart '
+            'for now; the data shows this is when traders give back gains.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: AppColors.gray500, fontSize: 12, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatRow extends StatelessWidget {
+  const _StatRow({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(
+                    color: AppColors.gray500, fontSize: 12.5)),
+          ),
+          Text(value,
+              style: TextStyle(
+                  color: color, fontSize: 13, fontWeight: FontWeight.w800)),
         ],
       ),
     );

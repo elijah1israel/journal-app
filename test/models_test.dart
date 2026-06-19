@@ -267,4 +267,90 @@ void main() {
       expect(both.brokenPnl, -120);
     });
   });
+
+  group('GuardrailStatus', () {
+    test('parses active block payload', () {
+      final s = GuardrailStatus.fromJson({
+        'daily_pnl': -150.0,
+        'daily_loss_limit': '100.00',
+        'daily_loss_limit_hit': true,
+        'cool_down_minutes': 30,
+        'cool_down_until': null,
+        'can_trade': false,
+        'block_reason': 'Daily loss limit reached.',
+      });
+      expect(s.canTrade, isFalse);
+      expect(s.dailyLossLimit, 100);
+      expect(s.dailyLossLimitHit, isTrue);
+    });
+
+    test('parses unblocked payload with no limit set', () {
+      final s = GuardrailStatus.fromJson({
+        'daily_pnl': 0,
+        'daily_loss_limit': null,
+        'daily_loss_limit_hit': false,
+        'cool_down_minutes': 0,
+        'cool_down_until': null,
+        'can_trade': true,
+        'block_reason': '',
+      });
+      expect(s.canTrade, isTrue);
+      expect(s.dailyLossLimit, isNull);
+      expect(s.blockReason, isEmpty);
+    });
+  });
+
+  group('TradeCall', () {
+    test('parses an active call with all TPs and status helpers', () {
+      final c = TradeCall.fromJson({
+        'id': 1, 'instrument': 'EURUSD', 'direction': 'long',
+        'entry': '1.0850', 'stop_loss': '1.0820',
+        'take_profit_1': '1.0890', 'take_profit_2': '1.0930',
+        'take_profit_3': null,
+        'risk_pct': '0.50', 'status': 'active',
+        'closed_at': null, 'closed_pnl_pips': null,
+      });
+      expect(c.isOpen, isTrue);
+      expect(c.isWinner, isFalse);
+      expect(c.takeProfit2, 1.0930);
+      expect(c.takeProfit3, isNull);
+      expect(c.statusLabel, 'Active');
+    });
+
+    test('flags a TP-hit call as winner and surfaces realised pips', () {
+      final c = TradeCall.fromJson({
+        'id': 2, 'instrument': 'XAUUSD', 'direction': 'short',
+        'entry': '2400', 'stop_loss': '2410', 'take_profit_1': '2380',
+        'status': 'tp1_hit',
+        'closed_at': '2026-06-19T15:00:00Z',
+        'closed_pnl_pips': '20.0',
+      });
+      expect(c.isWinner, isTrue);
+      expect(c.isOpen, isFalse);
+      expect(c.closedPnlPips, 20.0);
+      expect(c.statusLabel, 'TP1 hit');
+    });
+  });
+
+  group('AuthUser guardrails', () {
+    test('parses daily_loss_limit + cool_down_minutes_after_loss', () {
+      final u = AuthUser.fromJson({
+        'id': 1, 'email': 'g@x.io',
+        'first_name': 'Joy', 'last_name': 'G',
+        'experience_level': 'intermediate', 'timezone': 'Africa/Kampala',
+        'daily_loss_limit': '200.00',
+        'cool_down_minutes_after_loss': 30,
+      });
+      expect(u.dailyLossLimit, 200);
+      expect(u.coolDownMinutesAfterLoss, 30);
+    });
+
+    test('defaults guardrails to disabled when missing', () {
+      final u = AuthUser.fromJson({
+        'id': 1, 'email': 'x@y.io',
+      });
+      expect(u.dailyLossLimit, isNull);
+      expect(u.coolDownMinutesAfterLoss, 0);
+    });
+  });
 }

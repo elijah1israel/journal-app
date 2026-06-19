@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 import '../widgets/wickbook_top_bar.dart';
+import 'risk_guardrails_sheet.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -77,6 +78,9 @@ class ProfileScreen extends StatelessWidget {
               label: 'Open positions', value: state.openTrades.toString()),
           _StatRow(
               label: 'Strategies', value: state.strategies.length.toString()),
+          const SizedBox(height: 20),
+          const _SectionLabel('Risk guardrails'),
+          _GuardrailRow(user: user),
           const SizedBox(height: 20),
           const _SectionLabel('App'),
           _LinkRow(
@@ -195,6 +199,70 @@ class _StatRow extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _GuardrailRow extends StatelessWidget {
+  const _GuardrailRow({required this.user});
+  final dynamic user;
+
+  @override
+  Widget build(BuildContext context) {
+    final limit = user?.dailyLossLimit as double?;
+    final cooldown = user?.coolDownMinutesAfterLoss as int?;
+    final summary = _summary(limit, cooldown);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AppColors.surface,
+        builder: (_) => const RiskGuardrailsSheet(),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.shield_outlined,
+                size: 18, color: AppColors.gray500),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Daily loss + cool-down',
+                      style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray700)),
+                  const SizedBox(height: 2),
+                  Text(summary,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.gray500)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.gray400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _summary(double? limit, int? cooldown) {
+    if (limit == null && (cooldown ?? 0) == 0) {
+      return 'Disabled — tap to set hard guardrails.';
+    }
+    final parts = <String>[];
+    if (limit != null) parts.add('Cap: −${limit.toStringAsFixed(0)}/day');
+    if ((cooldown ?? 0) > 0) parts.add('Cool-down: ${cooldown}m');
+    return parts.join(' · ');
   }
 }
 

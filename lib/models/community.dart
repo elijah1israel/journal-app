@@ -4,6 +4,79 @@ double _toDouble(Object? v) {
   return double.tryParse(v.toString()) ?? 0;
 }
 
+double? _maybeDouble(Object? v) {
+  if (v == null) return null;
+  if (v is num) return v.toDouble();
+  return double.tryParse(v.toString());
+}
+
+/// Structured trade call payload attached 1:1 to a [CommunityPost] when
+/// `kind == 'trade_call'`. Status flips as the call plays out (TP1 hit,
+/// SL hit, closed, invalidated); subscribers see the status change in
+/// the feed without the guru re-posting.
+class TradeCall {
+  const TradeCall({
+    required this.id,
+    required this.instrument,
+    required this.direction,
+    required this.entry,
+    required this.stopLoss,
+    required this.takeProfit1,
+    required this.takeProfit2,
+    required this.takeProfit3,
+    required this.riskPct,
+    required this.status,
+    required this.closedAt,
+    required this.closedPnlPips,
+  });
+
+  final int id;
+  final String instrument;
+  final String direction; // 'long' | 'short'
+  final double entry;
+  final double stopLoss;
+  final double takeProfit1;
+  final double? takeProfit2;
+  final double? takeProfit3;
+  final double? riskPct;
+  final String status;
+  final DateTime? closedAt;
+  final double? closedPnlPips;
+
+  bool get isOpen => status == 'active';
+  bool get isWinner =>
+      status == 'tp1_hit' || status == 'tp2_hit' || status == 'tp3_hit';
+  bool get isLoser => status == 'sl_hit';
+
+  String get statusLabel => switch (status) {
+        'active'      => 'Active',
+        'tp1_hit'     => 'TP1 hit',
+        'tp2_hit'     => 'TP2 hit',
+        'tp3_hit'     => 'TP3 hit',
+        'sl_hit'      => 'SL hit',
+        'closed'      => 'Closed',
+        'invalidated' => 'Invalidated',
+        _             => status,
+      };
+
+  factory TradeCall.fromJson(Map<String, dynamic> json) => TradeCall(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        instrument: json['instrument'] as String? ?? '',
+        direction: json['direction'] as String? ?? 'long',
+        entry: _toDouble(json['entry']),
+        stopLoss: _toDouble(json['stop_loss']),
+        takeProfit1: _toDouble(json['take_profit_1']),
+        takeProfit2: _maybeDouble(json['take_profit_2']),
+        takeProfit3: _maybeDouble(json['take_profit_3']),
+        riskPct: _maybeDouble(json['risk_pct']),
+        status: json['status'] as String? ?? 'active',
+        closedAt: json['closed_at'] == null
+            ? null
+            : DateTime.tryParse(json['closed_at'] as String),
+        closedPnlPips: _maybeDouble(json['closed_pnl_pips']),
+      );
+}
+
 /// A subscription tier inside a [Community]. `price == 0` is free.
 class SubscriptionTier {
   const SubscriptionTier({
@@ -147,6 +220,7 @@ class CommunityPost {
     required this.isLocked,
     required this.commentCount,
     required this.createdAt,
+    required this.tradeCall,
   });
 
   final int id;
@@ -161,24 +235,32 @@ class CommunityPost {
   final bool isLocked;
   final int commentCount;
   final DateTime createdAt;
+  final TradeCall? tradeCall;
 
   bool get isPublic => minTierId == null;
+  bool get isTradeCall => kind == 'trade_call';
 
-  factory CommunityPost.fromJson(Map<String, dynamic> json) => CommunityPost(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        communityId: (json['community'] as num?)?.toInt() ?? 0,
-        authorId: (json['author'] as num?)?.toInt() ?? 0,
-        authorName: json['author_name'] as String? ?? '',
-        kind: json['kind'] as String? ?? 'text',
-        title: json['title'] as String? ?? '',
-        body: json['body'] as String? ?? '',
-        imageUrl: json['image'] as String?,
-        minTierId: (json['min_tier'] as num?)?.toInt(),
-        isLocked: json['is_locked'] as bool? ?? false,
-        commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
-        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
-            DateTime.now(),
-      );
+  factory CommunityPost.fromJson(Map<String, dynamic> json) {
+    final rawCall = json['trade_call'];
+    return CommunityPost(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      communityId: (json['community'] as num?)?.toInt() ?? 0,
+      authorId: (json['author'] as num?)?.toInt() ?? 0,
+      authorName: json['author_name'] as String? ?? '',
+      kind: json['kind'] as String? ?? 'text',
+      title: json['title'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      imageUrl: json['image'] as String?,
+      minTierId: (json['min_tier'] as num?)?.toInt(),
+      isLocked: json['is_locked'] as bool? ?? false,
+      commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      tradeCall: rawCall is Map
+          ? TradeCall.fromJson(Map<String, dynamic>.from(rawCall))
+          : null,
+    );
+  }
 }
 
 /// A single-level comment on a [CommunityPost].

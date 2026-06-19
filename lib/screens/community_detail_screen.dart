@@ -168,7 +168,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen> {
                             )
                           else
                             for (final p in _posts) ...[
-                              _PostCard(post: p),
+                              _PostCard(
+                                post: p,
+                                isOwner: c.isOwner,
+                                onCallStatusChanged: _load,
+                              ),
                               const SizedBox(height: 10),
                             ],
                         ],
@@ -315,9 +319,15 @@ class _Header extends StatelessWidget {
 }
 
 class _PostCard extends StatelessWidget {
-  const _PostCard({required this.post});
+  const _PostCard({
+    required this.post,
+    required this.isOwner,
+    required this.onCallStatusChanged,
+  });
 
   final CommunityPost post;
+  final bool isOwner;
+  final Future<void> Function() onCallStatusChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -354,8 +364,18 @@ class _PostCard extends StatelessWidget {
                   fontSize: 15,
                 )),
           ],
+          if (post.isTradeCall && post.tradeCall != null) ...[
+            const SizedBox(height: 10),
+            _TradeCallCard(
+              call: post.tradeCall!,
+              communityId: post.communityId,
+              postId: post.id,
+              isOwner: isOwner,
+              onStatusChanged: onCallStatusChanged,
+            ),
+          ],
           if (post.body.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 10),
             Text(post.body,
                 style: const TextStyle(
                     color: AppColors.gray700, fontSize: 14, height: 1.4)),
@@ -367,5 +387,249 @@ class _PostCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Structured trade-call card — the differentiator over a plain text
+/// signal post. Direction tints the header, prices sit in a compact
+/// grid, a status pill shows live state, and the owner gets a menu to
+/// flip the status as the call plays out.
+class _TradeCallCard extends StatelessWidget {
+  const _TradeCallCard({
+    required this.call,
+    required this.communityId,
+    required this.postId,
+    required this.isOwner,
+    required this.onStatusChanged,
+  });
+
+  final TradeCall call;
+  final int communityId;
+  final int postId;
+  final bool isOwner;
+  final Future<void> Function() onStatusChanged;
+
+  Color get _directionColor =>
+      call.direction == 'long' ? AppColors.success : AppColors.danger;
+
+  Color get _statusColor {
+    if (call.isWinner) return AppColors.success;
+    if (call.isLoser) return AppColors.danger;
+    if (call.isOpen) return AppColors.info;
+    return AppColors.gray500;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: _directionColor.withValues(alpha: 0.12),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(10)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  call.direction == 'long'
+                      ? Icons.trending_up
+                      : Icons.trending_down,
+                  color: _directionColor,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${call.instrument} · ${call.direction.toUpperCase()}',
+                  style: TextStyle(
+                    color: _directionColor,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const Spacer(),
+                StatusPill(label: call.statusLabel.toUpperCase(), color: _statusColor),
+                if (isOwner) ...[
+                  const SizedBox(width: 4),
+                  _StatusFlipMenu(
+                    communityId: communityId,
+                    postId: postId,
+                    current: call.status,
+                    onChanged: onStatusChanged,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Column(
+              children: [
+                Row(children: [
+                  _CallPrice(label: 'Entry', value: call.entry),
+                  _CallPrice(
+                      label: 'SL',
+                      value: call.stopLoss,
+                      tint: AppColors.danger),
+                ]),
+                const SizedBox(height: 6),
+                Row(children: [
+                  _CallPrice(
+                      label: 'TP1',
+                      value: call.takeProfit1,
+                      tint: AppColors.success),
+                  _CallPrice(
+                      label: 'TP2',
+                      value: call.takeProfit2,
+                      tint: AppColors.success),
+                ]),
+                if (call.takeProfit3 != null || call.riskPct != null) ...[
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    _CallPrice(
+                        label: 'TP3',
+                        value: call.takeProfit3,
+                        tint: AppColors.success),
+                    _CallPrice(
+                      label: 'Risk',
+                      value: call.riskPct,
+                      suffix: '%',
+                    ),
+                  ]),
+                ],
+                if (call.closedPnlPips != null) ...[
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    const Text('Realised',
+                        style: TextStyle(
+                            color: AppColors.gray500, fontSize: 11.5)),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${call.closedPnlPips!.toStringAsFixed(1)} pips',
+                      style: TextStyle(
+                          color: AppColors.pnl(call.closedPnlPips!),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800),
+                    ),
+                  ]),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CallPrice extends StatelessWidget {
+  const _CallPrice({
+    required this.label,
+    required this.value,
+    this.tint,
+    this.suffix = '',
+  });
+
+  final String label;
+  final double? value;
+  final Color? tint;
+  final String suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.borderSoft),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: AppColors.gray500,
+                )),
+            const SizedBox(height: 2),
+            Text(
+              value == null ? '–' : '${formatPrice(value)}$suffix',
+              style: TextStyle(
+                color: tint ?? AppColors.gray900,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Three-dot menu the community owner uses to flip a call's status
+/// as it plays out. Calls the parent's `onStatusChanged` after a
+/// successful flip so the detail screen re-loads the feed.
+class _StatusFlipMenu extends StatelessWidget {
+  const _StatusFlipMenu({
+    required this.communityId,
+    required this.postId,
+    required this.current,
+    required this.onChanged,
+  });
+
+  final int communityId;
+  final int postId;
+  final String current;
+  final Future<void> Function() onChanged;
+
+  static const _options = [
+    ('tp1_hit',     'Mark TP1 hit'),
+    ('tp2_hit',     'Mark TP2 hit'),
+    ('tp3_hit',     'Mark TP3 hit'),
+    ('sl_hit',      'Mark SL hit'),
+    ('closed',      'Mark closed'),
+    ('invalidated', 'Invalidate'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 18, color: AppColors.gray500),
+      tooltip: 'Update status',
+      onSelected: (status) => _flip(context, status),
+      itemBuilder: (_) => [
+        for (final (wire, label) in _options)
+          PopupMenuItem(
+            value: wire,
+            enabled: wire != current,
+            child: Text(label),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _flip(BuildContext context, String status) async {
+    try {
+      await CommunityService()
+          .updateCallStatus(communityId, postId, status: status);
+      await onChanged();
+    } on ApiException catch (e) {
+      if (context.mounted) showAppSnack(context, e.message, error: true);
+    }
   }
 }
