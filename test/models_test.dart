@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wickbook/models/auth_user.dart';
+import 'package:wickbook/models/community.dart';
 import 'package:wickbook/models/csv_import_result.dart';
 import 'package:wickbook/models/strategy.dart';
 import 'package:wickbook/models/trade.dart';
@@ -146,6 +147,54 @@ void main() {
           {'id': 1, 'name': 'x', 'timeframes': '', 'markets': ''});
       expect(s.timeframeList, isEmpty);
       expect(s.marketList, isEmpty);
+    });
+  });
+
+  group('Community.fromJson', () {
+    test('parses a community with tiers and viewer membership', () {
+      final c = Community.fromJson({
+        'id': 7,
+        'slug': 'pip-hunters',
+        'name': 'Pip Hunters',
+        'tagline': 'Daily forex calls',
+        'description': '',
+        'currency': 'UGX',
+        'owner': 3,
+        'owner_name': 'Joy G.',
+        'member_count': 124,
+        'cover_image': null,
+        'avatar': null,
+        'is_owner': false,
+        'tiers': [
+          {'id': 1, 'community': 7, 'name': 'Free', 'price': '0.00',
+           'interval': 'month', 'is_active': true, 'description': ''},
+          {'id': 2, 'community': 7, 'name': 'VIP', 'price': '20000.00',
+           'interval': 'month', 'is_active': true, 'description': ''},
+        ],
+        'my_membership': {
+          'id': 42, 'tier_id': 1, 'tier_name': 'Free',
+          'status': 'active', 'is_active': true,
+        },
+      });
+      expect(c.name, 'Pip Hunters');
+      expect(c.tiers.length, 2);
+      expect(c.tiers.first.isFree, isTrue);
+      expect(c.hasPaidTier, isTrue);
+      expect(c.isMember, isTrue);
+      expect(c.isOwner, isFalse);
+      expect(c.myMembership?.tierName, 'Free');
+    });
+
+    test('treats missing my_membership as not joined', () {
+      final c = Community.fromJson({
+        'id': 1, 'slug': 'x', 'name': 'X', 'tagline': '', 'description': '',
+        'currency': 'KES', 'owner': 1, 'owner_name': '',
+        'member_count': 0, 'tiers': [], 'my_membership': null,
+        'is_owner': false,
+      });
+      expect(c.myMembership, isNull);
+      expect(c.isMember, isFalse);
+      expect(c.hasPaidTier, isFalse);
     });
   });
 }
