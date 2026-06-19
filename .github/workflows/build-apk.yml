@@ -36,7 +36,10 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          # 3.27 introduced Color.withValues(alpha:); the codebase uses
+          # it everywhere now, so pin at or above that. Bump in lockstep
+          # with the pubspec `environment.sdk` constraint.
+          flutter-version: '3.27.1'
           channel: stable
           cache: true
 
