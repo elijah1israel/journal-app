@@ -56,9 +56,17 @@ class TradePlanService {
     }
   }
 
-  Future<GuardrailStatus> guardrails() async {
+  /// Pass `symbol` to scope the news-blackout check to the symbol's
+  /// currencies (planning EURUSD shouldn't be blocked by JPY news).
+  Future<GuardrailStatus> guardrails({String? symbol}) async {
     try {
-      final res = await _dio.get('/trades/guardrails/');
+      final res = await _dio.get(
+        '/trades/guardrails/',
+        queryParameters: {
+          if (symbol != null && symbol.isNotEmpty)
+            'symbol': symbol.toUpperCase(),
+        },
+      );
       return GuardrailStatus.fromJson(
           Map<String, dynamic>.from(res.data as Map));
     } on DioException catch (e) {

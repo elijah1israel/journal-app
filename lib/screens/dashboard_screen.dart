@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/trade_plan.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../widgets/news_strip.dart';
 import '../widgets/ui.dart';
 import '../widgets/wickbook_top_bar.dart';
 
@@ -24,7 +25,10 @@ class DashboardScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         color: AppColors.teal,
-        onRefresh: () => state.refreshTrades(),
+        onRefresh: () => Future.wait([
+          state.refreshTrades(),
+          state.refreshNews(),
+        ]),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
@@ -33,6 +37,10 @@ class DashboardScreen extends StatelessWidget {
                 state.discipline!.plannedTrades > 0) ...[
               const SizedBox(height: 16),
               _DisciplineCard(stats: state.discipline!),
+            ],
+            if (state.newsEvents.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              NewsStrip(events: state.newsEvents),
             ],
             const SizedBox(height: 20),
             const _SectionHeader(title: 'Recent trades'),

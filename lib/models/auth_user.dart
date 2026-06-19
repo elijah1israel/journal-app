@@ -11,6 +11,7 @@ class AuthUser {
     required this.timezone,
     required this.dailyLossLimit,
     required this.coolDownMinutesAfterLoss,
+    required this.newsBlackoutMinutes,
   });
 
   final int id;
@@ -30,6 +31,11 @@ class AuthUser {
   /// After any losing trade, new pre-trade plans are blocked for this
   /// many minutes. 0 disables the cool-down.
   final int coolDownMinutesAfterLoss;
+
+  /// Block new plans within this many minutes either side of a
+  /// high-impact economic event for any currency in the plan's symbol.
+  /// 0 disables the news blackout.
+  final int newsBlackoutMinutes;
 
   String get displayName {
     final full = '$firstName $lastName'.trim();
@@ -63,5 +69,7 @@ class AuthUser {
         dailyLossLimit: _maybeNum(json['daily_loss_limit']),
         coolDownMinutesAfterLoss:
             (json['cool_down_minutes_after_loss'] as num?)?.toInt() ?? 0,
+        newsBlackoutMinutes:
+            (json['news_blackout_minutes'] as num?)?.toInt() ?? 0,
       );
 }

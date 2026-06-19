@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:wickbook/models/auth_user.dart';
 import 'package:wickbook/models/community.dart';
 import 'package:wickbook/models/csv_import_result.dart';
+import 'package:wickbook/models/news_event.dart';
 import 'package:wickbook/models/strategy.dart';
 import 'package:wickbook/models/trade.dart';
 import 'package:wickbook/models/trade_plan.dart';
@@ -351,6 +352,77 @@ void main() {
       });
       expect(u.dailyLossLimit, isNull);
       expect(u.coolDownMinutesAfterLoss, 0);
+      expect(u.newsBlackoutMinutes, 0);
+    });
+
+    test('parses news_blackout_minutes', () {
+      final u = AuthUser.fromJson({
+        'id': 1, 'email': 'x@y.io',
+        'news_blackout_minutes': 45,
+      });
+      expect(u.newsBlackoutMinutes, 45);
+    });
+  });
+
+  group('NewsEvent', () {
+    test('parses impact + currency upper-cased', () {
+      final e = NewsEvent.fromJson({
+        'id': 11, 'when': '2026-06-19T12:30:00Z',
+        'currency': 'usd', 'country': 'us',
+        'impact': 'high', 'title': 'Non-Farm Employment Change',
+        'actual': '', 'forecast': '190K', 'previous': '210K',
+      });
+      expect(e.currency, 'USD');
+      expect(e.country, 'US');
+      expect(e.impact, NewsImpact.high);
+      expect(e.impact.label, 'High');
+    });
+
+    test('falls back to low impact on unknown value', () {
+      final e = NewsEvent.fromJson({
+        'id': 1, 'when': '2026-06-19T12:00:00Z',
+        'currency': 'EUR', 'impact': 'tsunami', 'title': '?',
+      });
+      expect(e.impact, NewsImpact.low);
+    });
+  });
+
+  group('GuardrailStatus news', () {
+    test('parses news_blackout_event when present', () {
+      final s = GuardrailStatus.fromJson({
+        'daily_pnl': 0,
+        'daily_loss_limit': null,
+        'daily_loss_limit_hit': false,
+        'cool_down_minutes': 0,
+        'cool_down_until': null,
+        'news_blackout_minutes': 30,
+        'news_blackout_event': {
+          'id': 11, 'when': '2026-06-19T12:30:00Z',
+          'currency': 'usd', 'impact': 'high', 'title': 'NFP',
+        },
+        'can_trade': false,
+        'block_reason': 'News blackout — USD NFP in about 10 min.',
+      });
+      expect(s.canTrade, isFalse);
+      expect(s.newsBlackoutMinutes, 30);
+      expect(s.newsBlackoutEvent, isNotNull);
+      expect(s.newsBlackoutEvent!.currency, 'USD');
+      expect(s.newsBlackoutEvent!.title, 'NFP');
+    });
+
+    test('news event is null when not set', () {
+      final s = GuardrailStatus.fromJson({
+        'daily_pnl': 0,
+        'daily_loss_limit': null,
+        'daily_loss_limit_hit': false,
+        'cool_down_minutes': 0,
+        'cool_down_until': null,
+        'news_blackout_minutes': 0,
+        'news_blackout_event': null,
+        'can_trade': true,
+        'block_reason': '',
+      });
+      expect(s.newsBlackoutEvent, isNull);
     });
   });
 }

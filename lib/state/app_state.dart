@@ -5,11 +5,13 @@ import 'package:flutter/foundation.dart';
 import '../models/auth_user.dart';
 import '../models/community.dart';
 import '../models/csv_import_result.dart';
+import '../models/news_event.dart';
 import '../models/strategy.dart';
 import '../models/trade.dart';
 import '../models/trade_plan.dart';
 import '../services/auth_service.dart';
 import '../services/community_service.dart';
+import '../services/news_service.dart';
 import '../services/strategy_service.dart';
 import '../services/trade_plan_service.dart';
 import '../services/trade_service.dart';
@@ -31,17 +33,20 @@ class AppState extends ChangeNotifier {
     StrategyService? strategies,
     CommunityService? communities,
     TradePlanService? plans,
+    NewsService? news,
   })  : _auth = auth ?? AuthService(),
         _trades = trades ?? TradeService(),
         _strategies = strategies ?? StrategyService(),
         _communities = communities ?? CommunityService(),
-        _plans = plans ?? TradePlanService();
+        _plans = plans ?? TradePlanService(),
+        _news = news ?? NewsService();
 
   final AuthService _auth;
   final TradeService _trades;
   final StrategyService _strategies;
   final CommunityService _communities;
   final TradePlanService _plans;
+  final NewsService _news;
 
   bool _bootstrapped = false;
   bool _signedIn = false;
@@ -56,6 +61,8 @@ class AppState extends ChangeNotifier {
   bool _loadingCommunities = false;
   DisciplineStats? _discipline;
   GuardrailStatus? _guardrails;
+  final List<NewsEvent> _newsEvents = [];
+  bool _loadingNews = false;
 
   bool get bootstrapped => _bootstrapped;
   bool get signedIn => _signedIn;
@@ -70,6 +77,28 @@ class AppState extends ChangeNotifier {
   bool get loadingCommunities => _loadingCommunities;
   DisciplineStats? get discipline => _discipline;
   GuardrailStatus? get guardrails => _guardrails;
+  List<NewsEvent> get newsEvents => List.unmodifiable(_newsEvents);
+  bool get loadingNews => _loadingNews;
+
+  /// Currencies the user has traded recently — used to scope the news
+  /// strip + the default `/api/news/` query. Falls back to the major
+  /// USD/EUR/GBP/JPY set when the user hasn't logged trades yet.
+  Set<String> get watchedCurrencies {
+    final found = <String>{};
+    for (final t in _tradeList.take(50)) {
+      found.addAll(_currenciesIn(t.symbol));
+    }
+    return found.isEmpty ? const {'USD', 'EUR', 'GBP', 'JPY'} : found;
+  }
+
+  static const _knownCurrencies = {
+    'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'NZD', 'CAD', 'CNY',
+  };
+
+  static Set<String> _currenciesIn(String symbol) {
+    final s = symbol.toUpperCase();
+    return _knownCurrencies.where(s.contains).toSet();
+  }
 
   // ── Derived stats (drives the dashboard) ──────────────────────
 
@@ -167,6 +196,7 @@ class AppState extends ChangeNotifier {
     _myCommunities.clear();
     _discipline = null;
     _guardrails = null;
+    _newsEvents.clear();
   }
 
   Future<void> _loadAfterAuth() async {
@@ -179,8 +209,29 @@ class AppState extends ChangeNotifier {
         refreshDiscipline(),
         refreshGuardrails(),
       ]);
+      // News depends on the watched-currencies list, which is derived
+      // from trades — so refresh it after the trade list lands.
+      await refreshNews();
     } catch (_) {
       // empty lists are fine — the screens render an EmptyState
+    }
+  }
+
+  Future<void> refreshNews() async {
+    _loadingNews = true;
+    notifyListeners();
+    try {
+      _newsEvents
+        ..clear()
+        ..addAll(await _news.list(
+          currencies: watchedCurrencies,
+          withinHours: 48,
+        ));
+    } catch (_) {
+      // News is non-critical — silently keep the previous list.
+    } finally {
+      _loadingNews = false;
+      notifyListeners();
     }
   }
 
@@ -193,9 +244,9 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<GuardrailStatus?> refreshGuardrails() async {
+  Future<GuardrailStatus?> refreshGuardrails({String? symbol}) async {
     try {
-      _guardrails = await _plans.guardrails();
+      _guardrails = await _plans.guardrails(symbol: symbol);
       notifyListeners();
       return _guardrails;
     } catch (_) {

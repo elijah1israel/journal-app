@@ -22,6 +22,7 @@ class _RiskGuardrailsSheetState extends State<RiskGuardrailsSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _limit;
   late final TextEditingController _cooldown;
+  late final TextEditingController _newsBlackout;
   bool _saving = false;
 
   @override
@@ -36,12 +37,16 @@ class _RiskGuardrailsSheetState extends State<RiskGuardrailsSheet> {
     _cooldown = TextEditingController(
       text: u == null ? '0' : u.coolDownMinutesAfterLoss.toString(),
     );
+    _newsBlackout = TextEditingController(
+      text: u == null ? '0' : u.newsBlackoutMinutes.toString(),
+    );
   }
 
   @override
   void dispose() {
     _limit.dispose();
     _cooldown.dispose();
+    _newsBlackout.dispose();
     super.dispose();
   }
 
@@ -49,11 +54,14 @@ class _RiskGuardrailsSheetState extends State<RiskGuardrailsSheet> {
     if (!_formKey.currentState!.validate()) return;
     final limitText = _limit.text.trim();
     final cooldownText = _cooldown.text.trim();
+    final newsText = _newsBlackout.text.trim();
     final payload = <String, dynamic>{
       // null clears the cap server-side
       'daily_loss_limit': limitText.isEmpty ? null : double.parse(limitText),
       'cool_down_minutes_after_loss':
           cooldownText.isEmpty ? 0 : int.parse(cooldownText),
+      'news_blackout_minutes':
+          newsText.isEmpty ? 0 : int.parse(newsText),
     };
     setState(() => _saving = true);
     try {
@@ -141,6 +149,38 @@ class _RiskGuardrailsSheetState extends State<RiskGuardrailsSheet> {
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: const InputDecoration(
                 hintText: 'e.g. 30. 0 disables the cool-down.',
+              ),
+              validator: (v) {
+                final t = (v ?? '').trim();
+                if (t.isEmpty) return null;
+                final n = int.tryParse(t);
+                if (n == null || n < 0) return 'Must be ≥ 0';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            const Text('NEWS BLACKOUT WINDOW (MIN)',
+                style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: AppColors.gray500)),
+            const SizedBox(height: 4),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Text(
+                'Blocks new plans within this many minutes either side of '
+                'a high-impact event for any currency in the plan\'s symbol. '
+                'EURUSD will see EUR and USD events.',
+                style: TextStyle(color: AppColors.gray500, fontSize: 11.5),
+              ),
+            ),
+            TextFormField(
+              controller: _newsBlackout,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                hintText: 'e.g. 30. 0 disables the news blackout.',
               ),
               validator: (v) {
                 final t = (v ?? '').trim();

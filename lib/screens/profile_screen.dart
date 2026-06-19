@@ -210,7 +210,8 @@ class _GuardrailRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final limit = user?.dailyLossLimit as double?;
     final cooldown = user?.coolDownMinutesAfterLoss as int?;
-    final summary = _summary(limit, cooldown);
+    final news = user?.newsBlackoutMinutes as int?;
+    final summary = _summary(limit, cooldown, news);
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => showModalBottomSheet<void>(
@@ -236,7 +237,7 @@ class _GuardrailRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Daily loss + cool-down',
+                  const Text('Daily loss · cool-down · news',
                       style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
@@ -255,13 +256,12 @@ class _GuardrailRow extends StatelessWidget {
     );
   }
 
-  String _summary(double? limit, int? cooldown) {
-    if (limit == null && (cooldown ?? 0) == 0) {
-      return 'Disabled — tap to set hard guardrails.';
-    }
+  String _summary(double? limit, int? cooldown, int? news) {
     final parts = <String>[];
     if (limit != null) parts.add('Cap: −${limit.toStringAsFixed(0)}/day');
     if ((cooldown ?? 0) > 0) parts.add('Cool-down: ${cooldown}m');
+    if ((news ?? 0) > 0) parts.add('News: ±${news}m');
+    if (parts.isEmpty) return 'Disabled — tap to set hard guardrails.';
     return parts.join(' · ');
   }
 }
