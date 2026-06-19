@@ -59,4 +59,53 @@ class StrategyService {
       throw toApiException(e);
     }
   }
+
+  // ── Checklist rules ────────────────────────────────────────────
+
+  Future<StrategyRule> createRule(
+    int strategyId, {
+    required String text,
+    bool isRequired = true,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/strategies/$strategyId/rules/',
+        data: {'text': text, 'is_required': isRequired},
+      );
+      return StrategyRule.fromJson(Map<String, dynamic>.from(res.data as Map));
+    } on DioException catch (e) {
+      throw toApiException(e, fallback: 'Could not save the rule.');
+    }
+  }
+
+  Future<StrategyRule> updateRule(
+    int strategyId,
+    int ruleId, {
+    String? text,
+    bool? isRequired,
+    int? order,
+  }) async {
+    final payload = <String, dynamic>{
+      if (text != null) 'text': text,
+      if (isRequired != null) 'is_required': isRequired,
+      if (order != null) 'order': order,
+    };
+    try {
+      final res = await _dio.patch(
+        '/strategies/$strategyId/rules/$ruleId/',
+        data: payload,
+      );
+      return StrategyRule.fromJson(Map<String, dynamic>.from(res.data as Map));
+    } on DioException catch (e) {
+      throw toApiException(e);
+    }
+  }
+
+  Future<void> deleteRule(int strategyId, int ruleId) async {
+    try {
+      await _dio.delete('/strategies/$strategyId/rules/$ruleId/');
+    } on DioException catch (e) {
+      throw toApiException(e);
+    }
+  }
 }
