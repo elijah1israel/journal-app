@@ -504,9 +504,9 @@ class _ErrorBlock extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
-        color: AppColors.danger.withOpacity(0.10),
+        color: AppColors.danger.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.danger.withOpacity(0.45)),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.45)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,7 +579,7 @@ class _SuccessView extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.teal50,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: AppColors.teal.withOpacity(0.5)),
+              border: Border.all(color: AppColors.teal.withValues(alpha: 0.5)),
             ),
             child:
                 const Icon(Icons.check, color: AppColors.teal, size: 32),
