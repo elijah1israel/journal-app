@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/trade.dart';
+import '../models/trade_plan.dart';
 import '../services/api_client.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -11,11 +12,21 @@ import '../widgets/ui.dart';
 /// Log-trade / edit-trade form. The backend computes P&L, R:R and
 /// status server-side, so this form only ever sends the inputs.
 class TradeFormScreen extends StatefulWidget {
-  const TradeFormScreen({super.key, this.initial});
+  const TradeFormScreen({super.key, this.initial, this.plan});
 
   /// When set the form opens in edit mode and PATCHes; otherwise it
   /// POSTs a new trade.
   final Trade? initial;
+
+  /// When set the form opens pre-filled from a pre-trade plan and the
+  /// resulting POST carries `plan: <id>` so the trade links back to it
+  /// (so the dashboard's discipline tile can count it).
+  final TradePlan? plan;
+
+  /// Convenience constructor for "take this plan now" — equivalent to
+  /// `TradeFormScreen(plan: plan)` but reads more obviously at call sites.
+  factory TradeFormScreen.fromPlan({required TradePlan plan, Key? key}) =>
+      TradeFormScreen(key: key, plan: plan);
 
   @override
   State<TradeFormScreen> createState() => _TradeFormScreenState();
@@ -38,21 +49,31 @@ class _TradeFormScreenState extends State<TradeFormScreen> {
   void initState() {
     super.initState();
     final t = widget.initial;
-    _symbol = TextEditingController(text: t?.symbol ?? '');
+    final p = widget.plan;
+    _symbol = TextEditingController(text: t?.symbol ?? p?.symbol ?? '');
     _entry = TextEditingController(
-        text: t?.entryPrice != null ? formatPrice(t!.entryPrice) : '');
+        text: t?.entryPrice != null
+            ? formatPrice(t!.entryPrice)
+            : (p?.plannedEntry != null ? formatPrice(p!.plannedEntry) : ''));
     _sl = TextEditingController(
-        text: t?.stopLoss != null ? formatPrice(t!.stopLoss) : '');
+        text: t?.stopLoss != null
+            ? formatPrice(t!.stopLoss)
+            : (p?.plannedSl != null ? formatPrice(p!.plannedSl) : ''));
     _tp = TextEditingController(
-        text: t?.takeProfit != null ? formatPrice(t!.takeProfit) : '');
+        text: t?.takeProfit != null
+            ? formatPrice(t!.takeProfit)
+            : (p?.plannedTp != null ? formatPrice(p!.plannedTp) : ''));
     _size = TextEditingController(
         text: t?.positionSize != null
             ? formatPrice(t!.positionSize, maxDecimals: 2)
-            : '1');
-    _notes = TextEditingController(text: t?.notes ?? '');
-    _direction = t?.direction ?? TradeDirection.buy;
+            : (p?.plannedSize != null
+                ? formatPrice(p!.plannedSize, maxDecimals: 2)
+                : '1'));
+    _notes = TextEditingController(text: t?.notes ?? p?.notes ?? '');
+    _direction = t?.direction ??
+        (p != null ? TradeDirection.fromWire(p.direction) : TradeDirection.buy);
     _result = t?.result ?? TradeResult.none;
-    _strategyId = t?.strategy;
+    _strategyId = t?.strategy ?? p?.strategyId;
   }
 
   @override
@@ -81,6 +102,7 @@ class _TradeFormScreenState extends State<TradeFormScreen> {
       if (_tp.text.trim().isNotEmpty) 'take_profit': _tp.text.trim(),
       'notes': _notes.text.trim(),
       if (_strategyId != null) 'strategy': _strategyId,
+      if (widget.plan != null) 'plan': widget.plan!.id,
       if (_result != TradeResult.none) 'result': _result.wire,
     };
     if (!_isEdit) {
@@ -163,6 +185,10 @@ class _TradeFormScreenState extends State<TradeFormScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
+            if (widget.plan != null) ...[
+              _PlanBanner(plan: widget.plan!),
+              const SizedBox(height: 14),
+            ],
             _Label('Symbol'),
             TextFormField(
               controller: _symbol,
@@ -328,4 +354,56 @@ class _Label extends StatelessWidget {
                 letterSpacing: 0.6,
                 color: AppColors.gray500)),
       );
+}
+
+/// Headline strip shown on the trade form when the user is logging a
+/// trade off the back of a [TradePlan] — keeps the discipline context
+/// front-and-centre. Green when rules were followed, red with the
+/// override reason when they weren't.
+class _PlanBanner extends StatelessWidget {
+  const _PlanBanner({required this.plan});
+  final TradePlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final followed = plan.requiredRulesFollowed;
+    final accent = followed ? AppColors.success : AppColors.danger;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          Icon(followed ? Icons.check_circle : Icons.warning_amber_rounded,
+              color: accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  followed ? 'Plan followed' : 'Plan broken',
+                  style: TextStyle(
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13),
+                ),
+                Text(
+                  followed
+                      ? 'Pre-trade checklist passed — this trade counts toward your discipline rate.'
+                      : 'You took this despite required rules being unticked. '
+                          'Reason on file: "${plan.overrideReason}".',
+                  style: const TextStyle(
+                      color: AppColors.gray700, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

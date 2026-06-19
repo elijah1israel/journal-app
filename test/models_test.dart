@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:wickbook/models/auth_user.dart';
+import 'package:wickbook/models/community.dart';
 import 'package:wickbook/models/csv_import_result.dart';
 import 'package:wickbook/models/strategy.dart';
 import 'package:wickbook/models/trade.dart';
+import 'package:wickbook/models/trade_plan.dart';
 
 void main() {
   group('AuthUser', () {
@@ -146,6 +148,123 @@ void main() {
           {'id': 1, 'name': 'x', 'timeframes': '', 'markets': ''});
       expect(s.timeframeList, isEmpty);
       expect(s.marketList, isEmpty);
+    });
+  });
+
+  group('Community.fromJson', () {
+    test('parses a community with tiers and viewer membership', () {
+      final c = Community.fromJson({
+        'id': 7,
+        'slug': 'pip-hunters',
+        'name': 'Pip Hunters',
+        'tagline': 'Daily forex calls',
+        'description': '',
+        'currency': 'UGX',
+        'owner': 3,
+        'owner_name': 'Joy G.',
+        'member_count': 124,
+        'cover_image': null,
+        'avatar': null,
+        'is_owner': false,
+        'tiers': [
+          {'id': 1, 'community': 7, 'name': 'Free', 'price': '0.00',
+           'interval': 'month', 'is_active': true, 'description': ''},
+          {'id': 2, 'community': 7, 'name': 'VIP', 'price': '20000.00',
+           'interval': 'month', 'is_active': true, 'description': ''},
+        ],
+        'my_membership': {
+          'id': 42, 'tier_id': 1, 'tier_name': 'Free',
+          'status': 'active', 'is_active': true,
+        },
+      });
+      expect(c.name, 'Pip Hunters');
+      expect(c.tiers.length, 2);
+      expect(c.tiers.first.isFree, isTrue);
+      expect(c.hasPaidTier, isTrue);
+      expect(c.isMember, isTrue);
+      expect(c.isOwner, isFalse);
+      expect(c.myMembership?.tierName, 'Free');
+    });
+
+    test('treats missing my_membership as not joined', () {
+      final c = Community.fromJson({
+        'id': 1, 'slug': 'x', 'name': 'X', 'tagline': '', 'description': '',
+        'currency': 'KES', 'owner': 1, 'owner_name': '',
+        'member_count': 0, 'tiers': [], 'my_membership': null,
+        'is_owner': false,
+      });
+      expect(c.myMembership, isNull);
+      expect(c.isMember, isFalse);
+      expect(c.hasPaidTier, isFalse);
+    });
+  });
+
+  group('Strategy checklist', () {
+    test('parses embedded rules into StrategyRule rows', () {
+      final s = Strategy.fromJson({
+        'id': 1, 'name': 'LQ', 'description': '', 'rules': '',
+        'timeframes': '', 'markets': '',
+        'checklist': [
+          {'id': 11, 'text': 'HTF bias agrees', 'is_required': true, 'order': 0},
+          {'id': 12, 'text': 'Sweep + FVG', 'is_required': true, 'order': 1},
+          {'id': 13, 'text': 'London session', 'is_required': false, 'order': 2},
+        ],
+      });
+      expect(s.checklist.length, 3);
+      expect(s.checklist.first.text, 'HTF bias agrees');
+      expect(s.checklist.last.isRequired, isFalse);
+    });
+
+    test('defaults to empty checklist when missing', () {
+      final s = Strategy.fromJson({'id': 1, 'name': 'x'});
+      expect(s.checklist, isEmpty);
+    });
+  });
+
+  group('TradePlan + DisciplineStats', () {
+    test('TradePlan parses planned prices and decision', () {
+      final p = TradePlan.fromJson({
+        'id': 7,
+        'strategy': 1,
+        'symbol': 'EURUSD',
+        'direction': 'buy',
+        'planned_entry': '1.0850',
+        'planned_sl': '1.0820',
+        'planned_tp': '1.0910',
+        'planned_size': '1',
+        'decision': 'take',
+        'override_reason': '',
+        'notes': '',
+        'checks': [
+          {'rule': 11, 'rule_text': 'HTF bias', 'is_required': true, 'checked': true},
+          {'rule': 12, 'rule_text': 'Sweep + FVG', 'is_required': true, 'checked': true},
+        ],
+        'required_rules_followed': true,
+        'created_at': '2026-06-19T10:00:00Z',
+        'decided_at': '2026-06-19T10:05:00Z',
+      });
+      expect(p.decision, PlanDecision.take);
+      expect(p.plannedEntry, 1.0850);
+      expect(p.checks.length, 2);
+      expect(p.requiredRulesFollowed, isTrue);
+    });
+
+    test('DisciplineStats reports hasComparison only with both buckets', () {
+      final solo = DisciplineStats.fromJson({
+        'closed_trades_total': 5, 'planned_trades_total': 5, 'planning_rate': 100,
+        'followed': {'count': 5, 'win_rate': 60, 'total_pnl': 300},
+        'broken':   {'count': 0, 'win_rate': null, 'total_pnl': 0},
+      });
+      expect(solo.hasComparison, isFalse);
+
+      final both = DisciplineStats.fromJson({
+        'closed_trades_total': 10, 'planned_trades_total': 8, 'planning_rate': 80,
+        'followed': {'count': 6, 'win_rate': 67, 'total_pnl': 400},
+        'broken':   {'count': 2, 'win_rate': 0,  'total_pnl': -120},
+      });
+      expect(both.hasComparison, isTrue);
+      expect(both.followedWinRate, 67);
+      expect(both.brokenPnl, -120);
     });
   });
 }

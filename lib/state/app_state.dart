@@ -1,11 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/auth_user.dart';
+import '../models/community.dart';
 import '../models/csv_import_result.dart';
 import '../models/strategy.dart';
 import '../models/trade.dart';
+import '../models/trade_plan.dart';
 import '../services/auth_service.dart';
+import '../services/community_service.dart';
 import '../services/strategy_service.dart';
+import '../services/trade_plan_service.dart';
 import '../services/trade_service.dart';
 
 /// App store for Journal. Single ChangeNotifier so every screen can
@@ -23,13 +29,19 @@ class AppState extends ChangeNotifier {
     AuthService? auth,
     TradeService? trades,
     StrategyService? strategies,
+    CommunityService? communities,
+    TradePlanService? plans,
   })  : _auth = auth ?? AuthService(),
         _trades = trades ?? TradeService(),
-        _strategies = strategies ?? StrategyService();
+        _strategies = strategies ?? StrategyService(),
+        _communities = communities ?? CommunityService(),
+        _plans = plans ?? TradePlanService();
 
   final AuthService _auth;
   final TradeService _trades;
   final StrategyService _strategies;
+  final CommunityService _communities;
+  final TradePlanService _plans;
 
   bool _bootstrapped = false;
   bool _signedIn = false;
@@ -37,16 +49,25 @@ class AppState extends ChangeNotifier {
 
   final List<Trade> _tradeList = [];
   final List<Strategy> _strategyList = [];
+  final List<Community> _discoverCommunities = [];
+  final List<Community> _myCommunities = [];
   bool _loadingTrades = false;
   bool _loadingStrategies = false;
+  bool _loadingCommunities = false;
+  DisciplineStats? _discipline;
 
   bool get bootstrapped => _bootstrapped;
   bool get signedIn => _signedIn;
   AuthUser? get user => _user;
   List<Trade> get trades => List.unmodifiable(_tradeList);
   List<Strategy> get strategies => List.unmodifiable(_strategyList);
+  List<Community> get discoverCommunities =>
+      List.unmodifiable(_discoverCommunities);
+  List<Community> get myCommunities => List.unmodifiable(_myCommunities);
   bool get loadingTrades => _loadingTrades;
   bool get loadingStrategies => _loadingStrategies;
+  bool get loadingCommunities => _loadingCommunities;
+  DisciplineStats? get discipline => _discipline;
 
   // ── Derived stats (drives the dashboard) ──────────────────────
 
@@ -140,14 +161,31 @@ class AppState extends ChangeNotifier {
     _user = null;
     _tradeList.clear();
     _strategyList.clear();
+    _discoverCommunities.clear();
+    _myCommunities.clear();
+    _discipline = null;
   }
 
   Future<void> _loadAfterAuth() async {
     // Best-effort — surface real errors only on explicit refreshes.
     try {
-      await Future.wait([refreshTrades(), refreshStrategies()]);
+      await Future.wait([
+        refreshTrades(),
+        refreshStrategies(),
+        refreshCommunities(),
+        refreshDiscipline(),
+      ]);
     } catch (_) {
       // empty lists are fine — the screens render an EmptyState
+    }
+  }
+
+  Future<void> refreshDiscipline() async {
+    try {
+      _discipline = await _plans.discipline();
+      notifyListeners();
+    } catch (_) {
+      // Soft-fail — dashboard tile just hides itself.
     }
   }
 
@@ -181,6 +219,9 @@ class AppState extends ChangeNotifier {
     final created = await _trades.create(payload);
     _tradeList.insert(0, created);
     notifyListeners();
+    // Background refresh — the discipline tile depends on the new trade
+    // landing in the followed/broken bucket, but the UX shouldn't wait.
+    unawaited(refreshDiscipline());
     return created;
   }
 
@@ -193,6 +234,7 @@ class AppState extends ChangeNotifier {
       _tradeList.insert(0, updated);
     }
     notifyListeners();
+    unawaited(refreshDiscipline());
     return updated;
   }
 
@@ -200,6 +242,7 @@ class AppState extends ChangeNotifier {
     await _trades.delete(id);
     _tradeList.removeWhere((t) => t.id == id);
     notifyListeners();
+    unawaited(refreshDiscipline());
   }
 
   /// Sync trades from a broker CSV. The server returns
@@ -272,5 +315,121 @@ class AppState extends ChangeNotifier {
     await _strategies.delete(id);
     _strategyList.removeWhere((s) => s.id == id);
     notifyListeners();
+  }
+
+  // ── Strategy rules (checklist) ────────────────────────────────
+
+  Future<void> addRule(int strategyId,
+      {required String text, bool isRequired = true}) async {
+    await _strategies.createRule(strategyId,
+        text: text, isRequired: isRequired);
+    await refreshStrategies();
+  }
+
+  Future<void> updateRule(int strategyId, int ruleId,
+      {String? text, bool? isRequired}) async {
+    await _strategies.updateRule(strategyId, ruleId,
+        text: text, isRequired: isRequired);
+    await refreshStrategies();
+  }
+
+  Future<void> deleteRule(int strategyId, int ruleId) async {
+    await _strategies.deleteRule(strategyId, ruleId);
+    await refreshStrategies();
+  }
+
+  // ── Trade plans ───────────────────────────────────────────────
+
+  Future<TradePlan> createTradePlan({
+    int? strategyId,
+    required String symbol,
+    required String direction,
+    double? plannedEntry,
+    double? plannedSl,
+    double? plannedTp,
+    double? plannedSize,
+    required String decision,
+    String overrideReason = '',
+    String notes = '',
+    required List<TradePlanCheck> checks,
+  }) {
+    return _plans.create(
+      strategyId: strategyId,
+      symbol: symbol,
+      direction: direction,
+      plannedEntry: plannedEntry,
+      plannedSl: plannedSl,
+      plannedTp: plannedTp,
+      plannedSize: plannedSize,
+      decision: decision,
+      overrideReason: overrideReason,
+      notes: notes,
+      checks: checks,
+    );
+  }
+
+  // ── Communities ────────────────────────────────────────────────
+
+  Future<void> refreshCommunities() async {
+    _loadingCommunities = true;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        _communities.listAll(),
+        _communities.listMine(),
+      ]);
+      _discoverCommunities
+        ..clear()
+        ..addAll(results[0]);
+      _myCommunities
+        ..clear()
+        ..addAll(results[1]);
+    } finally {
+      _loadingCommunities = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Community> createCommunity({
+    required String name,
+    String tagline = '',
+    String description = '',
+    String currency = 'UGX',
+  }) async {
+    final created = await _communities.create(
+      name: name,
+      tagline: tagline,
+      description: description,
+      currency: currency,
+    );
+    _myCommunities.insert(0, created);
+    _discoverCommunities.insert(0, created);
+    notifyListeners();
+    return created;
+  }
+
+  Future<Community> joinCommunity(int communityId, {int? tierId}) async {
+    final updated = await _communities.subscribe(communityId, tierId: tierId);
+    _replaceCommunity(updated);
+    if (!_myCommunities.any((c) => c.id == updated.id)) {
+      _myCommunities.insert(0, updated);
+    }
+    notifyListeners();
+    return updated;
+  }
+
+  Future<void> leaveCommunity(int communityId) async {
+    await _communities.leave(communityId);
+    _myCommunities.removeWhere((c) => c.id == communityId);
+    // We don't have the fresh community payload here — let the next
+    // refresh re-populate the membership flag on the discover list.
+    notifyListeners();
+  }
+
+  void _replaceCommunity(Community c) {
+    for (final list in [_discoverCommunities, _myCommunities]) {
+      final i = list.indexWhere((x) => x.id == c.id);
+      if (i != -1) list[i] = c;
+    }
   }
 }

@@ -321,13 +321,17 @@ class _StrategySheetState extends State<_StrategySheet> {
                       hintText: 'What it is, in a line.'),
                 ),
                 const SizedBox(height: 14),
-                const _Mini('Rules'),
+                const _Mini('Notes / freeform rules'),
                 TextFormField(
                   controller: _rules,
-                  maxLines: 4,
+                  maxLines: 3,
                   decoration: const InputDecoration(
                       hintText: 'Setup, entry trigger, risk, exit.'),
                 ),
+                if (_isEdit) ...[
+                  const SizedBox(height: 18),
+                  _RulesChecklistEditor(strategy: widget.initial!),
+                ],
                 const SizedBox(height: 14),
                 const _Mini('Timeframes'),
                 Wrap(
@@ -391,4 +395,167 @@ class _Mini extends StatelessWidget {
                 letterSpacing: 0.6,
                 color: AppColors.gray500)),
       );
+}
+
+/// Inline checklist editor — add / remove / toggle "required" for the
+/// rules the pre-trade plan flow will tick. The latest version of the
+/// strategy comes from AppState so additions show up immediately.
+class _RulesChecklistEditor extends StatefulWidget {
+  const _RulesChecklistEditor({required this.strategy});
+  final Strategy strategy;
+
+  @override
+  State<_RulesChecklistEditor> createState() => _RulesChecklistEditorState();
+}
+
+class _RulesChecklistEditorState extends State<_RulesChecklistEditor> {
+  final _newRule = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _newRule.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>();
+    final live = state.strategies.firstWhere(
+      (s) => s.id == widget.strategy.id,
+      orElse: () => widget.strategy,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Mini('Entry checklist'),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Each rule becomes a tickbox on the pre-trade plan. Required '
+            'rules must be ticked to "Take" without an override reason.',
+            style: TextStyle(color: AppColors.gray500, fontSize: 12),
+          ),
+        ),
+        for (final r in live.checklist)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.bg,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(r.text,
+                              style: const TextStyle(
+                                  color: AppColors.gray900, fontSize: 13)),
+                        ),
+                        if (r.isRequired)
+                          const StatusPill(
+                              label: 'REQUIRED', color: AppColors.warn)
+                        else
+                          const StatusPill(
+                              label: 'OPTIONAL', color: AppColors.info),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: r.isRequired
+                      ? 'Make optional'
+                      : 'Make required',
+                  icon: Icon(
+                      r.isRequired
+                          ? Icons.flag_outlined
+                          : Icons.flag,
+                      color: AppColors.gray500,
+                      size: 18),
+                  onPressed: _busy
+                      ? null
+                      : () => _toggleRequired(live.id, r.id, !r.isRequired),
+                ),
+                IconButton(
+                  tooltip: 'Delete',
+                  icon: const Icon(Icons.delete_outline,
+                      color: AppColors.danger, size: 18),
+                  onPressed: _busy ? null : () => _delete(live.id, r.id),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _newRule,
+                decoration: const InputDecoration(
+                  hintText: 'Add a rule (e.g. HTF bias agrees)',
+                  isDense: true,
+                ),
+                onSubmitted: (_) => _add(live.id),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.teal,
+                foregroundColor: AppColors.inkDeep,
+              ),
+              onPressed: _busy ? null : () => _add(live.id),
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _add(int strategyId) async {
+    final text = _newRule.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await context
+          .read<AppState>()
+          .addRule(strategyId, text: text, isRequired: true);
+      _newRule.clear();
+    } on ApiException catch (e) {
+      if (mounted) showAppSnack(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _toggleRequired(int strategyId, int ruleId, bool required) async {
+    setState(() => _busy = true);
+    try {
+      await context
+          .read<AppState>()
+          .updateRule(strategyId, ruleId, isRequired: required);
+    } on ApiException catch (e) {
+      if (mounted) showAppSnack(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete(int strategyId, int ruleId) async {
+    setState(() => _busy = true);
+    try {
+      await context.read<AppState>().deleteRule(strategyId, ruleId);
+    } on ApiException catch (e) {
+      if (mounted) showAppSnack(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 }

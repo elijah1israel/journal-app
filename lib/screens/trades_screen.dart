@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
 import '../widgets/wickbook_top_bar.dart';
 import 'csv_import_sheet.dart';
+import 'plan_trade_screen.dart';
 import 'trade_form_screen.dart';
 
 /// The trade journal — paginated list with filters (status + direction).
@@ -48,14 +49,31 @@ class _TradesScreenState extends State<TradesScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.teal,
-        foregroundColor: AppColors.inkDeep,
-        onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => const TradeFormScreen())),
-        icon: const Icon(Icons.add),
-        label: const Text('Log trade',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'plan-fab',
+            backgroundColor: AppColors.surface,
+            foregroundColor: AppColors.tealDarker,
+            tooltip: 'Plan a trade',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const PlanTradeScreen())),
+            child: const Icon(Icons.checklist),
+          ),
+          const SizedBox(height: 10),
+          FloatingActionButton.extended(
+            heroTag: 'log-fab',
+            backgroundColor: AppColors.teal,
+            foregroundColor: AppColors.inkDeep,
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const TradeFormScreen())),
+            icon: const Icon(Icons.add),
+            label: const Text('Log trade',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ],
       ),
       body: Column(
         children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/trade_plan.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ui.dart';
@@ -28,6 +29,11 @@ class DashboardScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             _StatGrid(state: state),
+            if (state.discipline != null &&
+                state.discipline!.plannedTrades > 0) ...[
+              const SizedBox(height: 16),
+              _DisciplineCard(stats: state.discipline!),
+            ],
             const SizedBox(height: 20),
             const _SectionHeader(title: 'Recent trades'),
             const SizedBox(height: 8),
@@ -236,3 +242,149 @@ class _MiniTradeTile extends StatelessWidget {
     );
   }
 }
+
+
+/// Dashboard tile that contrasts win rate + P&L on trades where the
+/// pre-trade checklist was followed vs broken. Hidden until at least
+/// one planned trade exists — the comparison is only meaningful once
+/// both buckets have data.
+class _DisciplineCard extends StatelessWidget {
+  const _DisciplineCard({required this.stats});
+  final DisciplineStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.rule, color: AppColors.tealDarker, size: 18),
+              const SizedBox(width: 8),
+              const Text('Discipline',
+                  style: TextStyle(
+                      color: AppColors.gray900,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14)),
+              const Spacer(),
+              if (stats.planningRate != null)
+                Text(
+                  '${stats.planningRate!.toStringAsFixed(0)}% planned',
+                  style: const TextStyle(
+                      color: AppColors.gray500, fontSize: 11),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _DisciplineBucket(
+                  label: 'Followed rules',
+                  count: stats.followedCount,
+                  winRate: stats.followedWinRate,
+                  pnl: stats.followedPnl,
+                  accent: AppColors.success,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _DisciplineBucket(
+                  label: 'Broke rules',
+                  count: stats.brokenCount,
+                  winRate: stats.brokenWinRate,
+                  pnl: stats.brokenPnl,
+                  accent: AppColors.danger,
+                ),
+              ),
+            ],
+          ),
+          if (stats.hasComparison &&
+              stats.followedWinRate != null &&
+              stats.brokenWinRate != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _verdict(stats.followedWinRate!, stats.brokenWinRate!),
+              style: const TextStyle(
+                  color: AppColors.gray600, fontSize: 12, height: 1.35),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _verdict(double followed, double broken) {
+    final delta = followed - broken;
+    if (delta >= 5) {
+      return 'You win ${delta.toStringAsFixed(0)} percentage points more often '
+          'when you follow your rules. The checklist is paying.';
+    }
+    if (delta <= -5) {
+      return 'Counter-intuitively your rule-breaking trades win more here — '
+          'worth auditing whether the rules still fit the market.';
+    }
+    return 'Following or breaking rules gives similar win rates right now. '
+        'Watch how this trends as more trades land.';
+  }
+}
+
+class _DisciplineBucket extends StatelessWidget {
+  const _DisciplineBucket({
+    required this.label,
+    required this.count,
+    required this.winRate,
+    required this.pnl,
+    required this.accent,
+  });
+
+  final String label;
+  final int count;
+  final double? winRate;
+  final double pnl;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(),
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: accent)),
+          const SizedBox(height: 6),
+          Text(
+            winRate == null ? '–' : '${winRate!.toStringAsFixed(0)}%',
+            style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.gray900),
+          ),
+          Text(
+            '$count trades · ${formatPnl(pnl)}',
+            style: const TextStyle(
+                fontSize: 11, color: AppColors.gray500),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

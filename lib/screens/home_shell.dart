@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import 'calendar_screen.dart';
+import 'communities_screen.dart';
 import 'dashboard_screen.dart';
 import 'profile_screen.dart';
 import 'strategies_screen.dart';
@@ -57,6 +58,12 @@ class _HomeShellState extends State<HomeShell> {
       icon: Icons.tune_outlined,
       selectedIcon: Icons.tune,
       builder: (_) => const StrategiesScreen(),
+    ),
+    _NavItem(
+      label: 'Communities',
+      icon: Icons.groups_2_outlined,
+      selectedIcon: Icons.groups_2,
+      builder: (_) => const CommunitiesScreen(),
     ),
     _NavItem(
       label: 'Profile',
