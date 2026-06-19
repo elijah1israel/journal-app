@@ -46,10 +46,24 @@ class _PlanTradeScreenState extends State<PlanTradeScreen> {
   void initState() {
     super.initState();
     // Re-poll the guardrail status as we land — the user might have a
-    // cool-down still active from a loss in another session.
+    // cool-down or news blackout still active from another session.
+    // Re-poll again whenever the symbol changes so news-blackout
+    // checks are scoped to the right currencies (planning EURUSD
+    // shouldn't be blocked by JPY news).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppState>().refreshGuardrails();
     });
+    _symbol.addListener(_onSymbolChanged);
+  }
+
+  String _lastPolledSymbol = '';
+  void _onSymbolChanged() {
+    final s = _symbol.text.trim().toUpperCase();
+    // Re-poll only once the user types a plausibly-complete symbol
+    // and don't spam — at least 5 chars and changed since last poll.
+    if (s.length < 5 || s == _lastPolledSymbol) return;
+    _lastPolledSymbol = s;
+    context.read<AppState>().refreshGuardrails(symbol: s);
   }
 
   static final _decimalFormatter =
@@ -526,26 +540,28 @@ class _GuardrailBlock extends StatelessWidget {
   const _GuardrailBlock({required this.status});
   final GuardrailStatus status;
 
+  /// Which check triggered the block, in priority order — the API
+  /// surfaces them in this same order so the title matches the reason.
+  _BlockReason get _reason {
+    if (status.dailyLossLimitHit) return _BlockReason.dailyLoss;
+    if (status.coolDownUntil != null) return _BlockReason.coolDown;
+    if (status.newsBlackoutEvent != null) return _BlockReason.news;
+    return _BlockReason.coolDown; // shouldn't happen — defensive fallback
+  }
+
   @override
   Widget build(BuildContext context) {
+    final reason = _reason;
     return RefreshIndicator(
       color: AppColors.teal,
       onRefresh: () => context.read<AppState>().refreshGuardrails(),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
         children: [
-          Icon(
-            status.dailyLossLimitHit
-                ? Icons.do_not_disturb
-                : Icons.timer_outlined,
-            color: AppColors.danger,
-            size: 56,
-          ),
+          Icon(reason.icon, color: AppColors.danger, size: 56),
           const SizedBox(height: 14),
           Text(
-            status.dailyLossLimitHit
-                ? 'Daily loss limit reached'
-                : 'Cool-down active',
+            reason.title,
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.gray900,
@@ -560,7 +576,8 @@ class _GuardrailBlock extends StatelessWidget {
             style: const TextStyle(
                 color: AppColors.gray500, fontSize: 13, height: 1.4),
           ),
-          if (status.coolDownUntil != null) ...[
+          if (reason == _BlockReason.coolDown &&
+              status.coolDownUntil != null) ...[
             const SizedBox(height: 8),
             Text(
               'Unlocks at ${DateFormat('HH:mm').format(status.coolDownUntil!.toLocal())}',
@@ -568,6 +585,11 @@ class _GuardrailBlock extends StatelessWidget {
               style: const TextStyle(
                   color: AppColors.gray500, fontSize: 12.5),
             ),
+          ],
+          if (reason == _BlockReason.news &&
+              status.newsBlackoutEvent != null) ...[
+            const SizedBox(height: 16),
+            _NewsEventBanner(event: status.newsBlackoutEvent!),
           ],
           const SizedBox(height: 24),
           Container(
@@ -590,6 +612,10 @@ class _GuardrailBlock extends StatelessWidget {
                   _StatRow(label: 'Cool-down',
                       value: '${status.coolDownMinutes} min',
                       color: AppColors.gray700),
+                if (status.newsBlackoutMinutes > 0)
+                  _StatRow(label: 'News blackout',
+                      value: '±${status.newsBlackoutMinutes} min',
+                      color: AppColors.gray700),
               ],
             ),
           ),
@@ -606,6 +632,80 @@ class _GuardrailBlock extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Compact card the block screen renders when a news event triggered
+/// the block. Mirrors the dashboard NewsStrip styling.
+class _NewsEventBanner extends StatelessWidget {
+  const _NewsEventBanner({required this.event});
+  final NewsBlackoutEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(event.currency,
+                style: const TextStyle(
+                    color: AppColors.danger,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    letterSpacing: 0.4)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(event.title,
+                    style: const TextStyle(
+                        color: AppColors.gray900,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(
+                  DateFormat('MMM d · HH:mm').format(event.when.toLocal()),
+                  style: const TextStyle(
+                      color: AppColors.gray500, fontSize: 11.5),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _BlockReason {
+  dailyLoss(
+    icon: Icons.do_not_disturb,
+    title: 'Daily loss limit reached',
+  ),
+  coolDown(
+    icon: Icons.timer_outlined,
+    title: 'Cool-down active',
+  ),
+  news(
+    icon: Icons.campaign_outlined,
+    title: 'News blackout',
+  );
+
+  const _BlockReason({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
 }
 
 class _StatRow extends StatelessWidget {

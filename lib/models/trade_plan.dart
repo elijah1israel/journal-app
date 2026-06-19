@@ -129,10 +129,39 @@ class TradePlan {
   }
 }
 
+/// Compact news payload the guardrail status carries when a blackout
+/// fires. Only the fields the block screen needs to render the reason
+/// — for the full event use the /api/news/ endpoint.
+class NewsBlackoutEvent {
+  const NewsBlackoutEvent({
+    required this.id,
+    required this.when,
+    required this.currency,
+    required this.impact,
+    required this.title,
+  });
+
+  final int id;
+  final DateTime when;
+  final String currency;
+  final String impact;
+  final String title;
+
+  factory NewsBlackoutEvent.fromJson(Map<String, dynamic> json) =>
+      NewsBlackoutEvent(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        when: DateTime.tryParse(json['when'] as String? ?? '') ??
+            DateTime.now(),
+        currency: (json['currency'] as String? ?? '').toUpperCase(),
+        impact: json['impact'] as String? ?? 'high',
+        title: json['title'] as String? ?? '',
+      );
+}
+
 /// Live status of the trader's risk guardrails (daily loss cap +
-/// post-loss cool-down). Computed server-side off today's closed
-/// trades — `canTrade` is what the Plan screen reads to decide
-/// between rendering the form and rendering the block banner.
+/// post-loss cool-down + news blackout). Computed server-side —
+/// `canTrade` is what the Plan screen reads to decide between
+/// rendering the form and rendering the block banner.
 class GuardrailStatus {
   const GuardrailStatus({
     required this.dailyPnl,
@@ -140,6 +169,8 @@ class GuardrailStatus {
     required this.dailyLossLimitHit,
     required this.coolDownMinutes,
     required this.coolDownUntil,
+    required this.newsBlackoutMinutes,
+    required this.newsBlackoutEvent,
     required this.canTrade,
     required this.blockReason,
   });
@@ -149,6 +180,8 @@ class GuardrailStatus {
   final bool dailyLossLimitHit;
   final int coolDownMinutes;
   final DateTime? coolDownUntil;
+  final int newsBlackoutMinutes;
+  final NewsBlackoutEvent? newsBlackoutEvent;
   final bool canTrade;
   final String blockReason;
 
@@ -158,18 +191,25 @@ class GuardrailStatus {
     return double.tryParse(v.toString());
   }
 
-  factory GuardrailStatus.fromJson(Map<String, dynamic> json) => GuardrailStatus(
-        dailyPnl: (json['daily_pnl'] as num?)?.toDouble() ?? 0,
-        dailyLossLimit: _maybeDouble(json['daily_loss_limit']),
-        dailyLossLimitHit: json['daily_loss_limit_hit'] as bool? ?? false,
-        coolDownMinutes:
-            (json['cool_down_minutes'] as num?)?.toInt() ?? 0,
-        coolDownUntil: json['cool_down_until'] == null
-            ? null
-            : DateTime.tryParse(json['cool_down_until'] as String),
-        canTrade: json['can_trade'] as bool? ?? true,
-        blockReason: json['block_reason'] as String? ?? '',
-      );
+  factory GuardrailStatus.fromJson(Map<String, dynamic> json) {
+    final rawEvent = json['news_blackout_event'];
+    return GuardrailStatus(
+      dailyPnl: (json['daily_pnl'] as num?)?.toDouble() ?? 0,
+      dailyLossLimit: _maybeDouble(json['daily_loss_limit']),
+      dailyLossLimitHit: json['daily_loss_limit_hit'] as bool? ?? false,
+      coolDownMinutes: (json['cool_down_minutes'] as num?)?.toInt() ?? 0,
+      coolDownUntil: json['cool_down_until'] == null
+          ? null
+          : DateTime.tryParse(json['cool_down_until'] as String),
+      newsBlackoutMinutes:
+          (json['news_blackout_minutes'] as num?)?.toInt() ?? 0,
+      newsBlackoutEvent: rawEvent is Map
+          ? NewsBlackoutEvent.fromJson(Map<String, dynamic>.from(rawEvent))
+          : null,
+      canTrade: json['can_trade'] as bool? ?? true,
+      blockReason: json['block_reason'] as String? ?? '',
+    );
+  }
 }
 
 /// Discipline aggregate the dashboard renders ("you trade better when
