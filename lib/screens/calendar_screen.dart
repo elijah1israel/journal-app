@@ -474,8 +474,8 @@ class _DayCell extends StatelessWidget {
     Color fillColor;
     Color borderColor;
     if (hasPnl) {
-      fillColor = tone.withOpacity(0.14);
-      borderColor = tone.withOpacity(0.30);
+      fillColor = tone.withValues(alpha: 0.14);
+      borderColor = tone.withValues(alpha: 0.30);
     } else {
       fillColor = AppColors.surface;
       borderColor = AppColors.border;
@@ -570,9 +570,9 @@ class _LegendDot extends StatelessWidget {
             width: 10,
             height: 10,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.28),
+              color: color.withValues(alpha: 0.28),
               borderRadius: BorderRadius.circular(3),
-              border: Border.all(color: color.withOpacity(0.55)),
+              border: Border.all(color: color.withValues(alpha: 0.55)),
             ),
           ),
           const SizedBox(width: 6),
@@ -684,7 +684,7 @@ class _MonthYearPickerSheetState extends State<_MonthYearPickerSheet> {
                           color: isSelected
                               ? AppColors.teal
                               : (isCurrentMonth
-                                  ? AppColors.teal.withOpacity(0.5)
+                                  ? AppColors.teal.withValues(alpha: 0.5)
                                   : AppColors.border),
                           width: isCurrentMonth && !isSelected ? 1.5 : 1,
                         ),

@@ -260,7 +260,7 @@ class _TradeTile extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: (isLong ? AppColors.success : AppColors.danger)
-                        .withOpacity(0.12),
+                        .withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
