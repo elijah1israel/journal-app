@@ -20,13 +20,20 @@ class SplashScreen extends StatelessWidget {
               height: 96,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Wickbook',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AppColors.ink,
-                letterSpacing: -0.5,
+            // Bearish red wick, bullish green body — the same two-candle
+            // colour cue the brand icon uses, so the wordmark reads as
+            // the logo even when the icon isn't beside it.
+            const Text.rich(
+              TextSpan(
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+                children: [
+                  TextSpan(text: 'Wick', style: TextStyle(color: AppColors.danger)),
+                  TextSpan(text: 'book', style: TextStyle(color: AppColors.success)),
+                ],
               ),
             ),
             const SizedBox(height: 16),
